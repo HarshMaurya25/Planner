@@ -129,7 +129,7 @@ function CalendarMenu({ onClearPast }) {
   );
 }
 
-function DayCell({ day, isCurrentMonth, isToday, tasks, importantDates, onClick }) {
+function DayCell({ day, isCurrentMonth, isToday, isSelected, tasks, importantDates, onClick }) {
   const allItems = [
     ...importantDates.map(d => ({ ...d, _type: 'date' })),
     ...tasks.map(t => ({ ...t, _type: 'task' })),
@@ -144,6 +144,7 @@ function DayCell({ day, isCurrentMonth, isToday, tasks, importantDates, onClick 
         min-h-[70px] md:min-h-[90px] p-1 md:p-1.5 border-b border-r border-app-border/50 cursor-pointer transition-all duration-300
         ${!isCurrentMonth ? 'opacity-30 bg-app-bg/30' : (cellColorStyle ? cellColorStyle.bg : 'hover:bg-[#F5F9FF]')}
         ${isToday && !cellColorStyle ? 'bg-[#EFF6FF]' : ''}
+        ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/5' : ''}
         ${cellColorStyle ? 'bg-opacity-40 hover:bg-opacity-60' : ''}
       `}
       onClick={() => onClick(day)}
@@ -265,7 +266,7 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2">
           <CalendarMenu onClearPast={() => setConfirmClear(true)} />
           <button
-            onClick={() => { setModalDefaultDate(null); setModalMode('event'); setShowAddModal(true); }}
+            onClick={() => { setModalDefaultDate(selectedDay || new Date()); setModalMode('event'); setShowAddModal(true); }}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95"
           >
             <Plus size={16} strokeWidth={3} />
@@ -291,6 +292,7 @@ export default function CalendarPage() {
               day={day}
               isCurrentMonth={isSameMonth(day, monthStart)}
               isToday={isSameDay(day, new Date())}
+              isSelected={selectedDay && isSameDay(day, selectedDay)}
               tasks={getTasksForDay(day)}
               importantDates={getImportantDatesForDay(day)}
               onClick={handleDayClick}
