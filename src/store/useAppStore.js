@@ -742,18 +742,54 @@ export const useAppStore = create((set, get) => ({
     if (!error) set(s => ({ importantDates: s.importantDates.filter(d => d.id !== dateId) }));
   },
 
-  clearPastDates: async () => {
+  updateImportantDate: async (dateId, updates) => {
+    const { data, error } = await supabase
+      .from('important_dates')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', dateId)
+      .select()
+      .single();
+    if (!error && data)
+      set(s => ({ importantDates: s.importantDates.map(d => d.id === dateId ? data : d) }));
+    return { data, error };
+  },
+
+  purgeDeletedRecords: async () => {
+    const userId = getUserId();
+    if (!userId) return;
+    
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    const threshold = oneDayAgo.toISOString();
+
+    // 1. Purge important_dates
+    await supabase
+      .from('important_dates')
+      .delete()
+      .eq('created_by', userId)
+      .not('deleted_at', 'is', null)
+      .lt('deleted_at', threshold);
+
+    // 2. Purge tasks
+    await supabase
+      .from('tasks')
+      .delete()
+      .eq('created_by', userId)
+      .not('deleted_at', 'is', null)
+      .lt('deleted_at', threshold);
+  },
+
+  softDeletePastDates: async () => {
+    const userId = getUserId();
+    if (!userId) return;
     const today = new Date().toISOString().split('T')[0];
+
     const { error } = await supabase
       .from('important_dates')
       .update({ deleted_at: new Date().toISOString() })
+      .eq('created_by', userId)
       .lt('date', today);
-    if (!error) {
-      set(s => ({ 
-        importantDates: s.importantDates.filter(d => d.date >= today) 
-      }));
-    }
-    return { error };
+    if (!error) get().fetchImportantDates();
   },
 
   // ── CALENDAR TASKS (all tasks with deadlines) ─────────

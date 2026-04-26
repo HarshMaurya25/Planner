@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User
+  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User, Edit2
 } from 'lucide-react';
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
@@ -21,17 +21,17 @@ const COLOR_STYLES = {
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function AddDateModal({ defaultDate, onClose, onAdd, mode = 'event' }) {
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState(defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-  const [color, setColor] = useState('blue');
+function DateModal({ defaultDate, onClose, onAction, mode = 'event', editingItem = null }) {
+  const [title, setTitle] = useState(editingItem ? editingItem.title : '');
+  const [date, setDate] = useState(editingItem ? editingItem.date : (defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')));
+  const [color, setColor] = useState(editingItem ? editingItem.color || 'blue' : 'blue');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     setLoading(true);
-    await onAdd(title.trim(), date, color);
+    await onAction(title.trim(), date, color, editingItem?.id);
     setLoading(false);
     onClose();
   };
@@ -40,7 +40,9 @@ function AddDateModal({ defaultDate, onClose, onAdd, mode = 'event' }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl border border-app-border w-full max-w-sm p-6 my-8 animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-app-heading">{mode === 'event' ? 'Mark Date' : 'New Task'}</h3>
+          <h3 className="text-lg font-bold text-app-heading">
+            {editingItem ? 'Edit Date' : (mode === 'event' ? 'Mark Date' : 'New Task')}
+          </h3>
           <button onClick={onClose} className="p-1 hover:bg-app-bg rounded-lg text-app-muted transition-colors"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +88,7 @@ function AddDateModal({ defaultDate, onClose, onAdd, mode = 'event' }) {
             </button>
             <button type="submit" disabled={!title.trim() || loading}
               className="flex-1 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-accent-hover disabled:opacity-40 shadow-lg shadow-accent/20 transition-all active:scale-95">
-              {loading ? 'Adding…' : (mode === 'event' ? 'Add Date' : 'Create Task')}
+              {loading ? 'Saving…' : (editingItem ? 'Save Changes' : (mode === 'event' ? 'Add Date' : 'Create Task'))}
             </button>
           </div>
         </form>
@@ -118,10 +120,10 @@ function CalendarMenu({ onClearPast }) {
         <div className="absolute right-0 top-11 z-50 bg-white border border-app-border rounded-xl shadow-xl py-2 min-w-[200px] overflow-hidden animate-in fade-in zoom-in duration-100">
           <div className="px-4 py-1.5 text-[10px] font-bold text-app-muted uppercase tracking-widest border-b border-app-border mb-1">Actions</div>
           <button
-            onClick={() => { onClearPast(); setOpen(false); }}
+            onClick={() => { setConfirmClear(true); setOpen(false); }}
             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
           >
-            <Trash2 size={14} /> Clear past dates
+            <Trash2 size={14} /> Clear all past dates
           </button>
         </div>
       )}
@@ -182,6 +184,7 @@ export default function CalendarPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalMode, setModalMode] = useState('event'); // 'event' | 'task'
   const [modalDefaultDate, setModalDefaultDate] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   const {
@@ -189,15 +192,18 @@ export default function CalendarPage() {
     fetchImportantDates,
     fetchCalendarTasks,
     addImportantDate,
+    updateImportantDate,
     deleteImportantDate,
-    clearPastDates,
+    purgeDeletedRecords,
+    softDeletePastDates,
     addSimpleTask
   } = useAppStore();
 
   useEffect(() => {
+    purgeDeletedRecords();
     fetchImportantDates();
     fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
-  }, [fetchImportantDates, fetchCalendarTasks]);
+  }, [purgeDeletedRecords, fetchImportantDates, fetchCalendarTasks]);
 
   const monthStart = startOfMonth(current);
   const monthEnd = endOfMonth(current);
@@ -219,13 +225,19 @@ export default function CalendarPage() {
     setSelectedDay(isSameDay(day, selectedDay) ? null : day);
   };
 
-  const handleAddAction = async (title, date, color) => {
-    if (modalMode === 'event') {
-      await addImportantDate(title, date, color);
+  const handleModalAction = async (title, date, color, id) => {
+    if (id) {
+      // Editing
+      await updateImportantDate(id, { title, date, color });
     } else {
-      await addSimpleTask(title, date);
-      // Refresh tasks
-      fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+      // Adding
+      if (modalMode === 'event') {
+        await addImportantDate(title, date, color);
+      } else {
+        await addSimpleTask(title, date);
+        // Refresh tasks
+        fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+      }
     }
   };
 
@@ -336,9 +348,17 @@ export default function CalendarPage() {
                         <span className={`text-sm ${cs.text}`}>★</span>
                         <span className={`text-xs font-bold ${cs.text}`}>{d.title}</span>
                       </div>
-                      <button onClick={() => deleteImportantDate(d.id)} className="text-app-muted hover:text-red-500 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => { setEditingItem(d); setModalMode('event'); setShowAddModal(true); }}
+                          className="p-1 hover:bg-white/20 rounded-lg text-app-muted transition-colors"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button onClick={() => deleteImportantDate(d.id)} className="p-1 hover:bg-white/20 rounded-lg text-app-muted hover:text-red-500 transition-colors">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -384,9 +404,17 @@ export default function CalendarPage() {
                         {format(parseISO(d.date), 'MMM d, yyyy')}
                       </p>
                     </div>
-                    <button onClick={() => deleteImportantDate(d.id)} className="text-app-muted hover:text-red-500 transition-colors shrink-0">
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button 
+                        onClick={() => { setEditingItem(d); setModalMode('event'); setShowAddModal(true); }}
+                        className="p-1.5 hover:bg-white/20 rounded-lg text-app-muted transition-colors"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button onClick={() => deleteImportantDate(d.id)} className="p-1.5 hover:bg-white/20 rounded-lg text-app-muted hover:text-red-500 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -396,20 +424,24 @@ export default function CalendarPage() {
       </div>
 
       {showAddModal && (
-        <AddDateModal
-          defaultDate={modalDefaultDate}
+        <DateModal
+          defaultDate={modalDefaultDate || selectedDay}
+          editingItem={editingItem}
           mode={modalMode}
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddAction}
+          onClose={() => { setShowAddModal(false); setEditingItem(null); }}
+          onAction={handleModalAction}
         />
       )}
 
       <ConfirmModal
         isOpen={confirmClear}
         onClose={() => setConfirmClear(false)}
-        onConfirm={clearPastDates}
+        onConfirm={async () => {
+          await softDeletePastDates();
+          setConfirmClear(false);
+        }}
         title="Clear Past Dates"
-        message="This will remove all marked dates that have already passed. Are you sure?"
+        message="This will move all past events to the archive. They will be permanently deleted after 1 day. Are you sure?"
       />
     </div>
   );
