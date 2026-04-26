@@ -429,7 +429,7 @@ export default function GroupedTasksPage() {
           {isEditingFolderNote ? (
             <div className="bg-white border border-app-border rounded-2xl p-4 shadow-xl mb-6">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Folder Description</span>
+                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Update Description</span>
                 <button onClick={() => setIsEditingFolderNote(false)} className="text-app-muted hover:text-red-500 transition-colors"><X size={14} /></button>
               </div>
               <textarea
@@ -453,15 +453,13 @@ export default function GroupedTasksPage() {
             </div>
           ) : (
             <div 
-              className="group relative border-l-2 border-accent/20 pl-5 py-1 hover:border-accent transition-all cursor-pointer"
+              className="group relative -mt-6 mb-10 hover:bg-black/5 rounded-xl p-2 -ml-2 transition-all cursor-pointer"
               onClick={() => setIsEditingFolderNote(true)}
             >
-              <div className="flex items-center gap-2 mb-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                <FileText size={10} className="text-accent" />
-                <span className="text-[9px] font-black text-app-muted uppercase tracking-widest">Description</span>
-                <Edit2 size={10} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity">
+                <Edit2 size={12} />
               </div>
-              <NoteRenderer text={currentFolder.description} className="!gap-1.5" />
             </div>
           )}
         </div>

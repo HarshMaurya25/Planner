@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function NoteRenderer({ text, className = "" }) {
+export default function NoteRenderer({ text, className = "", textSize = "text-[11px]" }) {
   if (!text) return null;
 
   return (
@@ -36,7 +36,7 @@ export default function NoteRenderer({ text, className = "" }) {
         });
 
         return (
-          <div key={i} className="flex gap-3 text-[11px] leading-relaxed group/line">
+          <div key={i} className={`flex gap-3 ${textSize} leading-relaxed group/line`}>
             {bullet ? (
               <span className={`shrink-0 font-black w-4 text-right ${isNumbered ? 'text-accent/50' : 'text-accent text-sm'}`}>
                 {bullet}
