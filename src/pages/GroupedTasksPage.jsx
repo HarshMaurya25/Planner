@@ -275,6 +275,7 @@ export default function GroupedTasksPage() {
   const isOwner = !currentFolder || currentFolder.created_by === user?.id;
 
   const [isEditingFolderNote, setIsEditingFolderNote] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [folderNoteText, setFolderNoteText] = useState('');
   const folderNoteInputRef = useRef(null);
 
@@ -287,7 +288,9 @@ export default function GroupedTasksPage() {
   const handleFolderNoteSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!currentFolder) return;
-    await updateFolder(currentFolder.id, { description: folderNoteText });
+    setIsSavingNote(true);
+    await updateFolder(currentFolder.id, { description: folderNoteText.trim() });
+    setIsSavingNote(false);
     setIsEditingFolderNote(false);
   };
   const [editingFolderIndex, setEditingFolderIndex] = useState(null);
@@ -439,7 +442,13 @@ export default function GroupedTasksPage() {
               />
               <div className="flex justify-end gap-2 mt-4">
                 <button onClick={() => setIsEditingFolderNote(false)} className="px-4 py-2 text-xs font-bold text-app-muted hover:bg-app-bg rounded-lg transition-colors">Cancel</button>
-                <button onClick={handleFolderNoteSubmit} className="px-5 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95">Save Note</button>
+                <button 
+                  onClick={handleFolderNoteSubmit} 
+                  disabled={isSavingNote}
+                  className="px-5 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSavingNote ? 'Saving...' : 'Save Note'}
+                </button>
               </div>
             </div>
           ) : (
