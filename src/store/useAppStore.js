@@ -248,7 +248,39 @@ export const useAppStore = create((set, get) => ({
       .insert({ title: title.trim(), created_by: userId, parent_id: parentId, color: color || get().getRandomColor(), type, position })
       .select()
       .single();
-    if (!error && data) set(s => ({ folders: [...s.folders, data] }));
+      
+    if (!error && data) {
+      set(s => ({ folders: [...s.folders, data] }));
+      
+      // Inherit team members if parent is shared
+      if (parentId) {
+        const { data: parentMembers } = await supabase
+          .from('folder_members')
+          .select('*')
+          .eq('folder_id', parentId);
+          
+        if (parentMembers && parentMembers.length > 0) {
+          // Copy members to the new folder
+          const newMembers = parentMembers.map(m => ({
+            folder_id: data.id,
+            user_id: m.user_id,
+            role: m.role
+          }));
+          await supabase.from('folder_members').insert(newMembers);
+          
+          // Mark the new folder as shared
+          await supabase
+            .from('folders')
+            .update({ is_shared: true })
+            .eq('id', data.id);
+            
+          set(s => ({
+            folders: s.folders.map(f => f.id === data.id ? { ...f, is_shared: true } : f)
+          }));
+        }
+      }
+    }
+    
     return { data, error };
   },
 
@@ -313,49 +345,75 @@ export const useAppStore = create((set, get) => ({
   },
 
   duplicateFolder: async (folderId) => {
-    const folder = get().folders.find(f => f.id === folderId);
-    if (!folder) return;
-    
-    // 1. Create new folder
-    const { data: newFolder, error: fError } = await supabase
-      .from('folders')
-      .insert({
-        title: `${folder.title} (Copy)`,
-        parent_id: folder.parent_id,
-        color: folder.color,
-        type: folder.type,
-        created_by: folder.created_by
-      })
-      .select()
-      .single();
-    
-    if (fError || !newFolder) return { error: fError };
-    
-    // 2. Fetch and copy tasks
-    const { data: tasks } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('folder_id', folderId)
-      .is('deleted_at', null);
+    const userId = getUserId();
+    if (!userId) return { error: "User not found" };
+
+    const originalFolder = get().folders.find(f => f.id === folderId);
+    if (!originalFolder) return { error: "Folder not found" };
+
+    let newFoldersList = [];
+
+    const recursiveDuplicate = async (origFolderId, newParentId, titleOverride = null) => {
+      const folder = get().folders.find(f => f.id === origFolderId);
+      if (!folder) return null;
+
+      // 1. Create new folder
+      const { data: newFolder, error: fError } = await supabase
+        .from('folders')
+        .insert({
+          title: titleOverride || folder.title,
+          parent_id: newParentId,
+          color: folder.color,
+          type: folder.type,
+          description: folder.description,
+          created_by: userId
+        })
+        .select()
+        .single();
       
-    if (tasks && tasks.length > 0) {
-      const tasksToInsert = tasks.map(t => ({
-        title: t.title,
-        description: t.description,
-        status: t.status,
-        priority: t.priority,
-        color: t.color,
-        deadline: t.deadline,
-        folder_id: newFolder.id,
-        created_by: t.created_by
-      }));
-      await supabase.from('tasks').insert(tasksToInsert);
+      if (fError || !newFolder) return null;
+      newFoldersList.push(newFolder);
+      
+      // 2. Fetch and copy tasks
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('folder_id', origFolderId)
+        .is('deleted_at', null);
+        
+      if (tasks && tasks.length > 0) {
+        const tasksToInsert = tasks.map(t => ({
+          title: t.title,
+          description: t.description,
+          status: t.status,
+          priority: t.priority,
+          color: t.color,
+          deadline: t.deadline,
+          position: t.position,
+          folder_id: newFolder.id,
+          created_by: userId
+        }));
+        await supabase.from('tasks').insert(tasksToInsert);
+      }
+      
+      // 3. Find sub-folders and recursively duplicate them
+      const subFolders = get().folders.filter(f => f.parent_id === origFolderId);
+      for (const sub of subFolders) {
+        await recursiveDuplicate(sub.id, newFolder.id);
+      }
+
+      return newFolder;
+    };
+
+    const newRootFolder = await recursiveDuplicate(folderId, originalFolder.parent_id, `${originalFolder.title} (Copy)`);
+
+    if (newRootFolder) {
+      set(s => ({ folders: [...s.folders, ...newFoldersList] }));
+      await get().fetchGroupedTasks();
+      return { data: newRootFolder };
     }
     
-    // 3. Update store
-    set(s => ({ folders: [...s.folders, newFolder] }));
-    await get().fetchGroupedTasks();
-    return { data: newFolder };
+    return { error: "Failed to duplicate folder" };
   },
 
   setFolderIndex: async (folderId, newIndex) => {
@@ -540,62 +598,90 @@ export const useAppStore = create((set, get) => ({
       .single();
     if (uErr || !targetUser) return { error: { message: 'User not found' } };
 
-    const folder = get().folders.find(f => f.id === folderId);
-    if (!folder) return { error: { message: 'Folder not found' } };
+    const originalFolder = get().folders.find(f => f.id === folderId);
+    if (!originalFolder) return { error: { message: 'Folder not found' } };
 
-    // 2. Create copy of folder for target user
-    const { data: newFolder, error: fErr } = await supabase
-      .from('folders')
-      .insert({
-        title: folder.title,
-        color: folder.color,
-        type: folder.type,
-        created_by: targetUser.id,
-        parent_id: null
-      })
-      .select()
-      .single();
-    if (fErr || !newFolder) return { error: fErr };
+    const recursiveCopy = async (origFolderId, newParentId) => {
+      const folder = get().folders.find(f => f.id === origFolderId);
+      if (!folder) return null;
 
-    // 3. Copy all tasks
-    const { data: tasks } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('folder_id', folderId)
-      .is('deleted_at', null);
+      // 2. Create copy of folder for target user
+      const { data: newFolder, error: fErr } = await supabase
+        .from('folders')
+        .insert({
+          title: folder.title,
+          color: folder.color,
+          type: folder.type,
+          description: folder.description,
+          created_by: targetUser.id,
+          parent_id: newParentId
+        })
+        .select()
+        .single();
+      if (fErr || !newFolder) return null;
+
+      // 3. Copy all tasks
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('folder_id', origFolderId)
+        .is('deleted_at', null);
+      
+      if (tasks && tasks.length > 0) {
+        const copies = tasks.map(t => ({
+          title: t.title,
+          description: t.description,
+          status: 'not_done', // reset status for the recipient
+          priority: t.priority,
+          color: t.color,
+          deadline: t.deadline,
+          position: t.position,
+          folder_id: newFolder.id,
+          created_by: targetUser.id
+        }));
+        await supabase.from('tasks').insert(copies);
+      }
+
+      // 4. Find sub-folders and recursively copy them
+      const subFolders = get().folders.filter(f => f.parent_id === origFolderId);
+      for (const sub of subFolders) {
+        await recursiveCopy(sub.id, newFolder.id);
+      }
+
+      return newFolder;
+    };
+
+    const newRootFolder = await recursiveCopy(folderId, null);
     
-    if (tasks && tasks.length > 0) {
-      const copies = tasks.map(t => ({
-        title: t.title,
-        description: t.description,
-        status: 'not_done',
-        priority: t.priority,
-        color: t.color,
-        deadline: t.deadline,
-        folder_id: newFolder.id,
-        created_by: targetUser.id
-      }));
-      await supabase.from('tasks').insert(copies);
+    if (newRootFolder) {
+      return { data: newRootFolder };
     }
-
-    return { data: newFolder };
+    
+    return { error: { message: 'Failed to send folder copy' } };
   },
 
   // Convert folder to TEAM SHARED mode
-  enableTeamShare: async (folderId) => {
+  convertToTeamFolder: async (folderId) => {
     const userId = getUserId();
     if (!userId) return;
-    
-    // Mark folder as shared
+
     await supabase
       .from('folders')
       .update({ is_shared: true, updated_at: new Date().toISOString() })
       .eq('id', folderId);
 
-    // Add owner as first member
-    await supabase
-      .from('folder_members')
-      .upsert({ folder_id: folderId, user_id: userId, role: 'owner' }, { onConflict: 'folder_id,user_id' });
+    // Add owner as first member to this folder and all sub-folders
+    const addOwnerRecursively = async (currentId) => {
+      await supabase
+        .from('folder_members')
+        .upsert({ folder_id: currentId, user_id: userId, role: 'owner' }, { onConflict: 'folder_id,user_id' });
+        
+      const children = get().folders.filter(f => f.parent_id === currentId);
+      for (const child of children) {
+        await addOwnerRecursively(child.id);
+      }
+    };
+    await addOwnerRecursively(folderId);
 
     set(s => ({
       folders: s.folders.map(f => f.id === folderId ? { ...f, is_shared: true } : f)
@@ -614,24 +700,39 @@ export const useAppStore = create((set, get) => ({
     const currentUserId = getUserId();
     if (user.id === currentUserId) return { error: { message: 'You are already a member' } };
 
-    const { error } = await supabase
-      .from('folder_members')
-      .upsert({ folder_id: folderId, user_id: user.id, role: 'member' }, { onConflict: 'folder_id,user_id' });
+    const addRecursively = async (currentId) => {
+      await supabase
+        .from('folder_members')
+        .upsert({ folder_id: currentId, user_id: user.id, role: 'member' }, { onConflict: 'folder_id,user_id' });
+        
+      const children = get().folders.filter(f => f.parent_id === currentId);
+      for (const child of children) {
+        await addRecursively(child.id);
+      }
+    };
     
-    if (error) return { error };
+    await addRecursively(folderId);
 
     // Refresh members
     await get().fetchFolderMembers(folderId);
     return { data: user };
   },
 
-  // Remove a member from a team shared folder
   removeTeamMember: async (folderId, userId) => {
-    await supabase
-      .from('folder_members')
-      .delete()
-      .eq('folder_id', folderId)
-      .eq('user_id', userId);
+    const removeRecursively = async (currentId) => {
+      await supabase
+        .from('folder_members')
+        .delete()
+        .eq('folder_id', currentId)
+        .eq('user_id', userId);
+        
+      const children = get().folders.filter(f => f.parent_id === currentId);
+      for (const child of children) {
+        await removeRecursively(child.id);
+      }
+    };
+    await removeRecursively(folderId);
+
     
     // Unassign their tasks
     await supabase
