@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Plus, Folder, ChevronRight, RotateCcw, Star, Palette, Trash2, 
-  X, ArrowLeft, MoreVertical, Move, GripVertical, Copy, Settings, Edit2, Calendar, Share2, Users, ChevronUp, ChevronDown, Check, LogOut, FileText
+  X, ArrowLeft, MoreVertical, Move, GripVertical, Copy, Settings, Edit2, Calendar, Share2, Users, ChevronUp, ChevronDown, Check, LogOut, FileText, Zap, Archive
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -202,6 +202,11 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
           <Item icon={Edit2} label="Rename" onClick={() => onRename(folder)} bold />
           <Item icon={Copy} label="Duplicate" onClick={() => onDuplicate(folder.id)} />
           <Item icon={Move} label="Move Folder" onClick={() => onMove(folder)} />
+          <Item 
+            icon={folder.type === 'remember' ? Zap : Archive} 
+            label={folder.type === 'remember' ? "Switch to Active List" : "Switch to Vault (Archive)"} 
+            onClick={() => onUpdate(folder.id, { type: folder.type === 'remember' ? 'complete' : 'remember' })} 
+          />
           
           <div className="h-px bg-app-border my-1 mx-2" />
           <button onClick={(e) => { e.stopPropagation(); setAutoSort(!autoSort); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-app-body hover:bg-app-bg transition-colors">
