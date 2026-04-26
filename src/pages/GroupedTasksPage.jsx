@@ -452,14 +452,17 @@ export default function GroupedTasksPage() {
               </div>
             </div>
           ) : (
-            <div 
-              className="group relative -mt-6 mb-10 hover:bg-black/5 rounded-xl p-2 -ml-2 transition-all cursor-pointer"
-              onClick={() => setIsEditingFolderNote(true)}
-            >
-              <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity">
-                <Edit2 size={12} />
+            <div className="group relative -mt-6 mb-6">
+              <div className="pr-10">
+                <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
               </div>
+              <button 
+                onClick={() => setIsEditingFolderNote(true)}
+                className="absolute top-0 right-0 p-2 hover:bg-black/5 rounded-lg opacity-40 hover:opacity-100 transition-all"
+                title="Edit Description"
+              >
+                <Edit2 size={14} />
+              </button>
             </div>
           )}
         </div>
