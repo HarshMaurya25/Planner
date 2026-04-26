@@ -202,7 +202,7 @@ export default function TaskCard({
         {/* Status Icons / Controls Trigger */}
         <div className="flex items-center gap-2">
           {task.priority && (
-            <Star size={14} className={PRIORITY_STYLES[task.priority]} fill="currentColor" />
+            <Star size={14} className={PRIORITY_STYLES[task.priority] || 'text-app-muted'} fill="currentColor" />
           )}
           <button 
             onClick={(e) => { e.stopPropagation(); setShowControls(!showControls); }}
