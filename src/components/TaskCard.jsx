@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, Star, Palette, Trash2, MoreHorizontal, Edit2, UserPlus, X, ChevronUp, ChevronDown, ExternalLink, FileText, Link as LinkIcon, LogOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
+import NoteRenderer from './NoteRenderer';
 
 const TASK_COLORS = {
   blue:   { bg: 'bg-blue-100',   text: 'text-blue-800',   border: 'border-blue-300' },
@@ -228,48 +229,8 @@ export default function TaskCard({
               />
             </form>
           ) : (
-            <div className="flex flex-col gap-2 pr-4">
-              {task.description.split('\n').map((line, i) => {
-                const trimmed = line.trim();
-                if (!trimmed) return <div key={i} className="h-2" />;
+            <NoteRenderer text={task.description} />
 
-                // Bullet detection
-                const bulletMatch = trimmed.match(/^(\d+\.|[\-*•])\s+(.*)/);
-                const content = bulletMatch ? bulletMatch[2] : trimmed;
-                const bullet = bulletMatch ? bulletMatch[1] : null;
-
-                // URL linkification
-                const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+)/g);
-                const renderedLine = parts.map((part, pi) => {
-                  if (part.match(/^(https?:\/\/|www\.)/)) {
-                    return (
-                      <a 
-                        key={pi}
-                        href={part.startsWith('www.') ? `https://${part}` : part}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        className="text-accent hover:underline font-bold break-all"
-                      >
-                        {part}
-                      </a>
-                    );
-                  }
-                  return part;
-                });
-
-                return (
-                  <div key={i} className="flex gap-2 text-[11px] leading-relaxed group/line">
-                    {bullet && (
-                      <span className="shrink-0 font-black text-accent/50 w-4 text-right">{bullet}</span>
-                    )}
-                    <p className={`font-medium text-app-muted break-words flex-1 ${bullet ? '' : 'pl-6'}`}>
-                      {renderedLine}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
       )}

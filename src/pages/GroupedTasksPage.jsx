@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import TaskCard from '../components/TaskCard';
 import ConfirmModal from '../components/ConfirmModal';
 import ShareModal from '../components/ShareModal';
+import NoteRenderer from '../components/NoteRenderer';
 
 const FOLDER_COLORS = {
   blue:   { bg: '#BFDBFE', border: '#93C5FD', dot: '#3B82F6' },
@@ -264,6 +265,22 @@ export default function GroupedTasksPage() {
   const fabRef = useRef(null);
   const [draggedId, setDraggedId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [isEditingFolderNote, setIsEditingFolderNote] = useState(false);
+  const [folderNoteText, setFolderNoteText] = useState('');
+  const folderNoteInputRef = useRef(null);
+
+  useEffect(() => {
+    if (currentFolder) {
+      setFolderNoteText(currentFolder.description || '');
+    }
+  }, [currentFolder]);
+
+  const handleFolderNoteSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!currentFolder) return;
+    await updateFolder(currentFolder.id, { description: folderNoteText });
+    setIsEditingFolderNote(false);
+  };
   const [editingFolderIndex, setEditingFolderIndex] = useState(null);
   const [newFolderIndex, setNewFolderIndex] = useState('');
   
@@ -400,6 +417,60 @@ export default function GroupedTasksPage() {
           )}
         </div>
       </div>
+
+      {/* Folder Note Section */}
+      {currentFolder && (
+        <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-300">
+          {isEditingFolderNote ? (
+            <div className="bg-white border-2 border-accent rounded-2xl p-4 shadow-xl">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Editing Folder Note</span>
+                <button onClick={() => setIsEditingFolderNote(false)} className="text-app-muted hover:text-red-500 transition-colors"><X size={14} /></button>
+              </div>
+              <textarea
+                ref={folderNoteInputRef}
+                value={folderNoteText}
+                onChange={e => setFolderNoteText(e.target.value)}
+                placeholder="Add a detailed description, links, or guidelines for this folder..."
+                className="w-full bg-app-bg border border-app-border rounded-xl p-4 text-xs font-medium focus:outline-none focus:border-accent min-h-[120px] custom-scrollbar"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button onClick={() => setIsEditingFolderNote(false)} className="px-4 py-2 text-xs font-bold text-app-muted hover:bg-app-bg rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleFolderNoteSubmit} className="px-5 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95">Save Note</button>
+              </div>
+            </div>
+          ) : (
+            <div 
+              className="group relative bg-white/40 border border-app-border/40 rounded-2xl p-5 hover:bg-white/80 hover:border-app-border transition-all cursor-pointer"
+              onClick={() => setIsEditingFolderNote(true)}
+            >
+              {!currentFolder.description ? (
+                <div className="flex items-center gap-3 text-app-muted opacity-60 group-hover:opacity-100 transition-opacity">
+                  <div className="w-10 h-10 rounded-xl bg-app-bg flex items-center justify-center shrink-0">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Add folder note...</p>
+                    <p className="text-[10px] font-medium mt-0.5">Guidelines, links, or context for this group</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={12} className="text-accent" />
+                      <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Folder Note</span>
+                    </div>
+                    <Edit2 size={12} className="text-app-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <NoteRenderer text={currentFolder.description} />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Folders Section */}
       {subFolders.length > 0 && (
