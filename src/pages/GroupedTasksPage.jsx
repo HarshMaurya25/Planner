@@ -204,7 +204,7 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
           <Item icon={Move} label="Move Folder" onClick={() => onMove(folder)} />
           <Item 
             icon={folder.type === 'remember' ? Zap : Archive} 
-            label={folder.type === 'remember' ? "Switch to Active List" : "Switch to Vault (Archive)"} 
+            label="Switch" 
             onClick={() => onUpdate(folder.id, { type: folder.type === 'remember' ? 'complete' : 'remember' })} 
           />
           
