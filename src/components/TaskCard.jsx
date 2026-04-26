@@ -50,7 +50,7 @@ export default function TaskCard({
   const noteInputRef = useRef(null);
 
   const isCompleted = task.status === 'completed';
-  const colorStyle = task.color ? TASK_COLORS[task.color] : { bg: 'bg-white', text: 'text-app-body', border: 'border-app-border' };
+  const colorStyle = (task.color && TASK_COLORS[task.color]) ? TASK_COLORS[task.color] : { bg: 'bg-white', text: 'text-app-body', border: 'border-app-border' };
   const assignedMember = members.find(m => m.user_id === task.assigned_to);
   const titleIsUrl = isUrl(task.title);
   const noteIsUrl = isUrl(task.description);
