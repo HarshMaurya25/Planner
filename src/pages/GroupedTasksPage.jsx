@@ -158,7 +158,7 @@ function AddFolderModal({ parentId, onClose, onAdd }) {
   );
 }
 
-function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUpdate, onRename, onShare, autoSort, setAutoSort, onDeleteAllTasks, onLeave, isOwner }) {
+function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUpdate, onRename, onShare, autoSort, setAutoSort, onDeleteAllTasks, onLeave, isOwner, onEditNote }) {
   const [open, setOpen] = useState(false);
   const [upwards, setUpwards] = useState(false);
   const ref = useRef(null);
@@ -201,6 +201,7 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
             <p className="text-[10px] font-black text-app-muted uppercase tracking-widest">Folder Options</p>
           </div>
           <Item icon={Edit2} label="Rename" onClick={() => onRename(folder)} bold />
+          <Item icon={FileText} label={folder.description ? "Edit Note" : "Add Note"} onClick={() => onEditNote()} />
           <Item icon={Copy} label="Duplicate" onClick={() => onDuplicate(folder.id)} />
           <Item icon={Move} label="Move Folder" onClick={() => onMove(folder)} />
           <Item 
@@ -265,6 +266,14 @@ export default function GroupedTasksPage() {
   const fabRef = useRef(null);
   const [draggedId, setDraggedId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const currentFolder = folderId ? folders.find(f => f.id === folderId) : null;
+  const subFolders = folders.filter(f => {
+    if (folderId) return f.parent_id === folderId;
+    return f.parent_id === null || !folders.some(parent => parent.id === f.parent_id);
+  }).sort((a, b) => (a.position || 0) - (b.position || 0));
+  const folderTasks = groupedTasks.filter(t => t.folder_id === folderId);
+  const isOwner = !currentFolder || currentFolder.created_by === user?.id;
+
   const [isEditingFolderNote, setIsEditingFolderNote] = useState(false);
   const [folderNoteText, setFolderNoteText] = useState('');
   const folderNoteInputRef = useRef(null);
@@ -296,14 +305,6 @@ export default function GroupedTasksPage() {
     const handler = (e) => { if (fabRef.current && !fabRef.current.contains(e.target)) setFabOpen(false); };
     document.addEventListener('mousedown', handler); return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  const currentFolder = folderId ? folders.find(f => f.id === folderId) : null;
-  const subFolders = folders.filter(f => {
-    if (folderId) return f.parent_id === folderId;
-    return f.parent_id === null || !folders.some(parent => parent.id === f.parent_id);
-  }).sort((a, b) => (a.position || 0) - (b.position || 0));
-  const folderTasks = groupedTasks.filter(t => t.folder_id === folderId);
-  const isOwner = !currentFolder || currentFolder.created_by === user?.id;
 
   const handleAddTask = async (e) => {
     e?.preventDefault(); if (!taskInput.trim()) return;
@@ -413,13 +414,14 @@ export default function GroupedTasksPage() {
               autoSort={autoSort} setAutoSort={setAutoSort}
               onLeave={(id) => setConfirmDelete({ open: true, title: 'Exit Team', message: 'Leave this team folder?', onConfirm: () => { leaveFolder(id); navigate('/groups'); } })}
               isOwner={isOwner}
+              onEditNote={() => setIsEditingFolderNote(true)}
             />
           )}
         </div>
       </div>
 
       {/* Folder Note Section */}
-      {currentFolder && (
+      {currentFolder && (isEditingFolderNote || currentFolder.description) && (
         <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-300">
           {isEditingFolderNote ? (
             <div className="bg-white border-2 border-accent rounded-2xl p-4 shadow-xl">
@@ -445,28 +447,14 @@ export default function GroupedTasksPage() {
               className="group relative bg-white/40 border border-app-border/40 rounded-2xl p-5 hover:bg-white/80 hover:border-app-border transition-all cursor-pointer"
               onClick={() => setIsEditingFolderNote(true)}
             >
-              {!currentFolder.description ? (
-                <div className="flex items-center gap-3 text-app-muted opacity-60 group-hover:opacity-100 transition-opacity">
-                  <div className="w-10 h-10 rounded-xl bg-app-bg flex items-center justify-center shrink-0">
-                    <FileText size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">Add folder note...</p>
-                    <p className="text-[10px] font-medium mt-0.5">Guidelines, links, or context for this group</p>
-                  </div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText size={12} className="text-accent" />
+                  <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Folder Note</span>
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText size={12} className="text-accent" />
-                      <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Folder Note</span>
-                    </div>
-                    <Edit2 size={12} className="text-app-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <NoteRenderer text={currentFolder.description} />
-                </>
-              )}
+                <Edit2 size={12} className="text-app-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <NoteRenderer text={currentFolder.description} />
             </div>
           )}
         </div>
