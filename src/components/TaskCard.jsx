@@ -228,23 +228,47 @@ export default function TaskCard({
               />
             </form>
           ) : (
-            <div className="flex flex-col gap-1 pr-4">
-              {isUrl(task.description) ? (
-                <a 
-                  href={formatLink(task.description)} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  onClick={e => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-[11px] font-bold text-accent hover:underline bg-accent/5 px-2 py-1.5 rounded-lg w-fit max-w-full break-all"
-                >
-                  <LinkIcon size={12} className="shrink-0" />
-                  {task.description}
-                </a>
-              ) : (
-                <p className="text-[11px] font-medium text-app-muted leading-relaxed bg-black/5 px-3 py-2 rounded-xl break-words whitespace-pre-wrap border border-black/5">
-                  {task.description}
-                </p>
-              )}
+            <div className="flex flex-col gap-2 pr-4">
+              {task.description.split('\n').map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2" />;
+
+                // Bullet detection
+                const bulletMatch = trimmed.match(/^(\d+\.|[\-*•])\s+(.*)/);
+                const content = bulletMatch ? bulletMatch[2] : trimmed;
+                const bullet = bulletMatch ? bulletMatch[1] : null;
+
+                // URL linkification
+                const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+)/g);
+                const renderedLine = parts.map((part, pi) => {
+                  if (part.match(/^(https?:\/\/|www\.)/)) {
+                    return (
+                      <a 
+                        key={pi}
+                        href={part.startsWith('www.') ? `https://${part}` : part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-accent hover:underline font-bold break-all"
+                      >
+                        {part}
+                      </a>
+                    );
+                  }
+                  return part;
+                });
+
+                return (
+                  <div key={i} className="flex gap-2 text-[11px] leading-relaxed group/line">
+                    {bullet && (
+                      <span className="shrink-0 font-black text-accent/50 w-4 text-right">{bullet}</span>
+                    )}
+                    <p className={`font-medium text-app-muted break-words flex-1 ${bullet ? '' : 'pl-6'}`}>
+                      {renderedLine}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
