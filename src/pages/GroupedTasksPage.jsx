@@ -162,6 +162,8 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
   const [upwards, setUpwards] = useState(false);
   const ref = useRef(null);
 
+  if (!folder) return null;
+
   useEffect(() => {
     if (!open) return;
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
