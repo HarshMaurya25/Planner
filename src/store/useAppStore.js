@@ -73,12 +73,17 @@ export const useAppStore = create((set, get) => ({
   addSimpleTask: async (title, deadline = null) => {
     const userId = getUserId();
     if (!userId || !title.trim()) return;
+    
+    // Find max position
+    const maxPos = get().simpleTasks.reduce((max, t) => Math.max(max, t.position || 0), 0);
+    const position = maxPos + 1;
+
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ title: title.trim(), created_by: userId, folder_id: null, deadline, color: get().getRandomColor() })
+      .insert({ title: title.trim(), created_by: userId, folder_id: null, deadline, color: get().getRandomColor(), position })
       .select()
       .single();
-    if (!error && data) set(s => ({ simpleTasks: [data, ...s.simpleTasks] }));
+    if (!error && data) set(s => ({ simpleTasks: [...s.simpleTasks, data] }));
     return { data, error };
   },
 
@@ -231,10 +236,16 @@ export const useAppStore = create((set, get) => ({
 
   addFolder: async (title, parentId = null, color = null, type = 'complete') => {
     const userId = getUserId();
-    if (!userId) return;
+    if (!userId || !title.trim()) return;
+
+    // Find max position in this level
+    const siblings = get().folders.filter(f => f.parent_id === parentId);
+    const maxPos = siblings.reduce((max, f) => Math.max(max, f.position || 0), 0);
+    const position = maxPos + 1;
+
     const { data, error } = await supabase
       .from('folders')
-      .insert({ title: title.trim(), created_by: userId, parent_id: parentId, color: color || get().getRandomColor(), type })
+      .insert({ title: title.trim(), created_by: userId, parent_id: parentId, color: color || get().getRandomColor(), type, position })
       .select()
       .single();
     if (!error && data) set(s => ({ folders: [...s.folders, data] }));
@@ -440,12 +451,18 @@ export const useAppStore = create((set, get) => ({
   addGroupedTask: async (title, folderId, deadline = null) => {
     const userId = getUserId();
     if (!userId || !folderId) return;
+
+    // Find max position in this folder
+    const folderTasks = get().groupedTasks.filter(t => t.folder_id === folderId);
+    const maxPos = folderTasks.reduce((max, t) => Math.max(max, t.position || 0), 0);
+    const position = maxPos + 1;
+
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ title: title.trim(), created_by: userId, folder_id: folderId, deadline, color: get().getRandomColor() })
+      .insert({ title: title.trim(), created_by: userId, folder_id: folderId, deadline, color: get().getRandomColor(), position })
       .select()
       .single();
-    if (!error && data) set(s => ({ groupedTasks: [data, ...s.groupedTasks] }));
+    if (!error && data) set(s => ({ groupedTasks: [...s.groupedTasks, data] }));
     return { data, error };
   },
 
