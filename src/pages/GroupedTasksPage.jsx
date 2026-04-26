@@ -427,17 +427,17 @@ export default function GroupedTasksPage() {
       {currentFolder && (isEditingFolderNote || currentFolder.description) && (
         <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-300">
           {isEditingFolderNote ? (
-            <div className="bg-white border-2 border-accent rounded-2xl p-4 shadow-xl">
+            <div className="bg-white border border-app-border rounded-2xl p-4 shadow-xl mb-6">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Editing Folder Note</span>
+                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Folder Description</span>
                 <button onClick={() => setIsEditingFolderNote(false)} className="text-app-muted hover:text-red-500 transition-colors"><X size={14} /></button>
               </div>
               <textarea
                 ref={folderNoteInputRef}
                 value={folderNoteText}
                 onChange={e => setFolderNoteText(e.target.value)}
-                placeholder="Add a detailed description, links, or guidelines for this folder..."
-                className="w-full bg-app-bg border border-app-border rounded-xl p-4 text-xs font-medium focus:outline-none focus:border-accent min-h-[120px] custom-scrollbar"
+                placeholder="Add guidelines, links, or context for this folder..."
+                className="w-full bg-app-bg border border-app-border rounded-xl p-4 text-xs font-medium focus:outline-none focus:border-accent min-h-[140px] custom-scrollbar"
                 autoFocus
               />
               <div className="flex justify-end gap-2 mt-4">
@@ -447,23 +447,21 @@ export default function GroupedTasksPage() {
                   disabled={isSavingNote}
                   className="px-5 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isSavingNote ? 'Saving...' : 'Save Note'}
+                  {isSavingNote ? 'Saving...' : 'Save Description'}
                 </button>
               </div>
             </div>
           ) : (
             <div 
-              className="group relative bg-white/40 border border-app-border/40 rounded-2xl p-5 hover:bg-white/80 hover:border-app-border transition-all cursor-pointer"
+              className="group relative border-l-2 border-accent/20 pl-5 py-1 hover:border-accent transition-all cursor-pointer"
               onClick={() => setIsEditingFolderNote(true)}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileText size={12} className="text-accent" />
-                  <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Folder Note</span>
-                </div>
-                <Edit2 size={12} className="text-app-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center gap-2 mb-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                <FileText size={10} className="text-accent" />
+                <span className="text-[9px] font-black text-app-muted uppercase tracking-widest">Description</span>
+                <Edit2 size={10} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <NoteRenderer text={currentFolder.description} />
+              <NoteRenderer text={currentFolder.description} className="!gap-1.5" />
             </div>
           )}
         </div>
