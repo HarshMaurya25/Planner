@@ -483,8 +483,9 @@ export default function GroupedTasksPage() {
       {folderId && (
         <div className="space-y-4">
           <div className="space-y-3">
-            {sortedTasks.map((task, index) => (
-              <TaskCard 
+            {(sortedTasks || []).map((task, index) => (
+              task && (
+                <TaskCard 
                 key={task.id} 
                 task={task} 
                 index={index} 
@@ -502,7 +503,8 @@ export default function GroupedTasksPage() {
                 onMoveDirection={handleMoveTask}
                 isOwner={isOwner}
               />
-            ))}
+            )
+          ))}
             {addingTask && (
               <form onSubmit={handleAddTask} className="mt-4 animate-in slide-in-from-top-2 duration-200">
                 <div className="bg-white border-2 border-accent rounded-2xl overflow-hidden shadow-xl shadow-accent/5">
