@@ -13,6 +13,7 @@ export const useAppStore = create((set, get) => ({
   loading: false,
   showCreatedDates: false, // UI Preference
   myTasks: [],          // Tasks assigned to current user
+  folderMembers: {},    // Map of folderId -> members array
   toggleCreatedDates: () => set(s => ({ showCreatedDates: !s.showCreatedDates })),
   
   // ── REALTIME SYNC ───────────────────────────────────
