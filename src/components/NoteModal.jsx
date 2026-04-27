@@ -38,6 +38,8 @@ export default function NoteModal({ initialText, onSave, onClose }) {
       <div 
         className="bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl border-x border-t sm:border border-app-border w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 ease-out"
         onClick={e => e.stopPropagation()}
+        draggable={false}
+        onDragStart={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-app-border bg-app-bg/50">

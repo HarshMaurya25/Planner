@@ -34,7 +34,7 @@ const formatLink = (str) => {
 export default function TaskCard({ 
   task, index, onUpdate, onDelete, onRename, onSetIndex,
   isSharedFolder, members = [], onAssign,
-  onDragStart, onDragOver, onDrop, isDragging,
+  onDragStart, onDragOver, onDrop, onDragEnd, isDragging,
   onMoveDirection,
   isOwner = true // Default to true for non-shared tasks
 }) {
@@ -115,10 +115,9 @@ export default function TaskCard({
   };
 
   return (
-    <div
-      ref={cardRef}
-      draggable={true}
-      onDragStart={(e) => onDragStart?.(e, task.id)}
+    <>
+      <div
+        ref={cardRef}
       onDragOver={(e) => onDragOver?.(e)}
       onDrop={(e) => onDrop?.(e, task.id)}
       onClick={() => setIsExpanded(!isExpanded)}
@@ -127,12 +126,15 @@ export default function TaskCard({
         ${colorStyle.bg} ${colorStyle.border} 
         ${isExpanded ? 'ring-2 ring-accent/10 shadow-lg' : ''}
         ${isCompleted ? 'opacity-50 grayscale-[0.5]' : 'shadow-card hover:shadow-card-hover'}
-        ${isDragging ? 'opacity-40 border-dashed bg-app-bg' : ''}
+        ${isDragging ? 'opacity-30 scale-[0.98] border-dashed bg-app-bg' : ''}
       `}
     >
       <div className="flex items-center gap-4">
         {/* Index Badge (Handle) */}
         <div 
+          draggable={true}
+          onDragStart={(e) => onDragStart?.(e, task.id)}
+          onDragEnd={() => onDragEnd?.()}
           onClick={handleIndexClick}
           className={`text-[10px] font-black text-app-muted bg-black/5 hover:bg-accent/10 hover:text-accent w-8 h-8 rounded-lg flex flex-col items-center justify-center shrink-0 transition-all select-none cursor-grab active:cursor-grabbing`}
           title="Drag to reorder or tap to move"
@@ -336,6 +338,7 @@ export default function TaskCard({
           </div>
         </div>
       )}
+      </div>
       {showNoteModal && (
         <NoteModal 
           initialText={task.description}
@@ -343,6 +346,6 @@ export default function TaskCard({
           onClose={() => setShowNoteModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }

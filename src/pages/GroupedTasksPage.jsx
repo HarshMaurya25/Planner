@@ -496,8 +496,11 @@ export default function GroupedTasksPage() {
             }
 
             return (
-              <div key={folder.id} onClick={() => navigate(`/groups/${folder.id}`)}
-                className="group flex items-center bg-white border border-app-border rounded-2xl p-4 cursor-pointer hover:border-accent hover:shadow-card-hover transition-all duration-200">
+              <div key={folder.id} 
+                onClick={() => navigate(`/groups/${folder.id}`)}
+                draggable={false}
+                className="group flex items-center bg-white border border-app-border rounded-2xl p-4 cursor-pointer hover:border-accent hover:shadow-card-hover transition-all duration-200"
+              >
                 <div 
                   onClick={(e) => { e.stopPropagation(); setEditingFolderIndex(folder.id); setNewFolderIndex(index + 1); }}
                   className="text-[10px] font-black text-app-muted bg-black/5 hover:bg-black/10 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mr-3 transition-colors"
@@ -588,6 +591,7 @@ export default function GroupedTasksPage() {
                 onDragStart={onTaskDragStart}
                 onDragOver={onTaskDragOver}
                 onDrop={onTaskDrop}
+                onDragEnd={() => setDraggedTaskId(null)}
                 isDragging={draggedTaskId === task.id}
                 onMoveDirection={handleMoveTask}
                 isOwner={isOwner}
