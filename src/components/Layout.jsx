@@ -17,6 +17,7 @@ export default function Layout() {
   useEffect(() => {
     if (user) {
       subscribeToChanges();
+      useAppStore.getState().purgeDeletedRecords();
     }
     return () => unsubscribe();
   }, [user, subscribeToChanges, unsubscribe]);

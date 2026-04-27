@@ -206,10 +206,9 @@ export default function CalendarPage() {
   } = useAppStore();
 
   useEffect(() => {
-    purgeDeletedRecords();
     fetchImportantDates();
     fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
-  }, [purgeDeletedRecords, fetchImportantDates, fetchCalendarTasks]);
+  }, [fetchImportantDates, fetchCalendarTasks]);
 
   // Sync local allTasks when store tasks change
   useEffect(() => {

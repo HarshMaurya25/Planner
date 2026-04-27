@@ -732,12 +732,11 @@ export const useAppStore = create((set, get) => ({
       .update({ is_shared: false, updated_at: new Date().toISOString() })
       .in('id', treeIds);
 
-    // 3. Remove all members except the owner
+    // 3. Remove all members
     await supabase
       .from('folder_members')
       .delete()
-      .in('folder_id', treeIds)
-      .neq('role', 'owner');
+      .in('folder_id', treeIds);
     
     // 4. Unassign tasks from everyone except the owner
     await supabase
@@ -955,6 +954,14 @@ export const useAppStore = create((set, get) => ({
     // 2. Purge tasks
     await supabase
       .from('tasks')
+      .delete()
+      .eq('created_by', userId)
+      .not('deleted_at', 'is', null)
+      .lt('deleted_at', threshold);
+
+    // 3. Purge folders
+    await supabase
+      .from('folders')
       .delete()
       .eq('created_by', userId)
       .not('deleted_at', 'is', null)
