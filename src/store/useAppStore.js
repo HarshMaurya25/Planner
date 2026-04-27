@@ -778,7 +778,7 @@ export const useAppStore = create((set, get) => ({
     await supabase
       .from('tasks')
       .update({ assigned_to: null, updated_at: new Date().toISOString() })
-      .eq('folder_id', folderId)
+      .in('folder_id', treeIds)
       .eq('assigned_to', userId);
     
     await get().fetchFolderMembers(folderId);

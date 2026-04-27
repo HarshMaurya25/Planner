@@ -56,10 +56,6 @@ export default function SimpleTasksPage() {
     e.preventDefault(); if (!draggedTaskId || draggedTaskId === targetId) return;
     const siblings = sortedTasks.filter(t => t.id !== draggedTaskId);
     const targetIdx = siblings.findIndex(t => t.id === targetId);
-    let newPos;
-    if (targetIdx === 0) newPos = (siblings[0].position || 0) - 1;
-    else if (targetIdx === siblings.length - 1) newPos = (siblings[siblings.length - 1].position || 0) + 1;
-    else newPos = ((siblings[targetIdx].position || 0) + (siblings[targetIdx - 1].position || 0)) / 2;
     await setTaskIndex(draggedTaskId, targetIdx); setDraggedTaskId(null);
     fetchSimpleTasks();
   };
