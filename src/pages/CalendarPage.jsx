@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  ChevronLeft, ChevronRight, Plus, X, CalIcon, MoreVertical, Trash2, Check, User, Edit2, FileText
+  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User, Edit2, FileText
 } from 'lucide-react';
 import NoteModal from '../components/NoteModal';
 import {
