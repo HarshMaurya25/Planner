@@ -10,7 +10,7 @@ export default function ShareModal({ folder, onClose }) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
-  const { sendFolderCopy, enableTeamShare, addTeamMember, removeTeamMember, fetchFolderMembers, folderMembers } = useAppStore();
+  const { sendFolderCopy, enableTeamShare, disableTeamShare, addTeamMember, removeTeamMember, fetchFolderMembers, folderMembers } = useAppStore();
   const { user } = useAuthStore();
   const members = folderMembers[folder.id] || [];
   const isOwner = folder.created_by === user?.id;
@@ -77,8 +77,8 @@ export default function ShareModal({ folder, onClose }) {
           </button>
         </div>
 
-        {/* Mode Chooser (only when not already shared) */}
-        {tab === 'choose' && !folder.is_shared && (
+        {/* Mode Chooser */}
+        {tab === 'choose' && (
           <div className="p-6 space-y-3">
             <button
               onClick={() => setTab('copy')}
@@ -93,7 +93,7 @@ export default function ShareModal({ folder, onClose }) {
               </div>
             </button>
             <button
-              onClick={handleEnableTeam}
+              onClick={() => folder.is_shared ? setTab('team') : handleEnableTeam()}
               disabled={loading}
               className="w-full flex items-center gap-4 p-4 border border-app-border rounded-2xl hover:border-accent hover:bg-accent/5 transition-all group text-left"
             >
@@ -101,8 +101,8 @@ export default function ShareModal({ folder, onClose }) {
                 <Users size={20} />
               </div>
               <div>
-                <p className="text-sm font-bold text-app-heading">Team Share</p>
-                <p className="text-[11px] text-app-muted mt-0.5">Real-time sync. Everyone sees the same data.</p>
+                <p className="text-sm font-bold text-app-heading">{folder.is_shared ? 'Manage Team' : 'Team Share'}</p>
+                <p className="text-[11px] text-app-muted mt-0.5">{folder.is_shared ? 'View and manage team members.' : 'Real-time sync. Everyone sees the same data.'}</p>
               </div>
             </button>
           </div>
@@ -146,6 +146,29 @@ export default function ShareModal({ folder, onClose }) {
         {/* Team Share Tab */}
         {(tab === 'team' || folder.is_shared) && (
           <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setTab('choose')} className="text-xs font-bold text-accent hover:underline">← Mode Selection</button>
+                <span className="text-xs font-bold text-app-muted">Team Share</span>
+              </div>
+              {isOwner && (
+                <button 
+                  onClick={async () => {
+                    if (window.confirm("Stop team sharing? This will remove all members and make this folder private.")) {
+                      setLoading(true);
+                      await disableTeamShare(folder.id);
+                      setLoading(false);
+                      onClose();
+                    }
+                  }}
+                  disabled={loading}
+                  className="text-[10px] font-black text-red-500 hover:underline uppercase tracking-widest disabled:opacity-50"
+                >
+                  Stop Sharing
+                </button>
+              )}
+            </div>
+
             {/* Add Member Input */}
             {isOwner && (
               <div className="flex gap-2 mb-5">

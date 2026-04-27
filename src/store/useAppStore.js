@@ -711,6 +711,39 @@ export const useAppStore = create((set, get) => ({
     }));
   },
 
+  // Convert folder back to PRIVATE
+  disableTeamShare: async (folderId) => {
+    const userId = getUserId();
+    if (!userId) return;
+
+    // 1. Find all tree IDs
+    const allFolders = get().folders;
+    const treeIds = [];
+    const collectDescendants = (id) => {
+      treeIds.push(id);
+      const children = allFolders.filter(f => f.parent_id === id);
+      children.forEach(c => collectDescendants(c.id));
+    };
+    collectDescendants(folderId);
+
+    // 2. Set is_shared = false for all folders in tree
+    await supabase
+      .from('folders')
+      .update({ is_shared: false, updated_at: new Date().toISOString() })
+      .in('id', treeIds);
+
+    // 3. Remove all members except the owner
+    await supabase
+      .from('folder_members')
+      .delete()
+      .in('folder_id', treeIds)
+      .neq('role', 'owner');
+
+    set(s => ({
+      folders: s.folders.map(f => treeIds.includes(f.id) ? { ...f, is_shared: false } : f)
+    }));
+  },
+
   // Add a member to a team shared folder
   addTeamMember: async (folderId, username) => {
     const { data: user, error: uErr } = await supabase
