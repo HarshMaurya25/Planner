@@ -277,17 +277,26 @@ export default function GroupedTasksPage() {
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const currentFolder = folderId ? folders.find(f => f.id === folderId) : null;
 
-  const getRecursiveTasks = (fId) => {
-    const f = folders.find(x => x.id === fId);
-    if (!f) return [];
+  const getRecursiveTasks = useMemo(() => {
+    const memo = {};
+    const calculate = (fId) => {
+      if (memo[fId] !== undefined) return memo[fId];
+      
+      const f = folders.find(x => x.id === fId);
+      if (!f) return [];
 
-    let tks = groupedTasks.filter(t => String(t.folder_id) === String(fId));
-    const children = folders.filter(child => String(child.parent_id) === String(fId));
-    children.forEach(c => {
-      tks = [...tks, ...getRecursiveTasks(c.id)];
-    });
-    return tks;
-  };
+      let tks = groupedTasks.filter(t => String(t.folder_id) === String(fId));
+      const children = folders.filter(child => String(child.parent_id) === String(fId));
+      
+      children.forEach(c => {
+        tks = [...tks, ...calculate(c.id)];
+      });
+      
+      memo[fId] = tks;
+      return tks;
+    };
+    return calculate;
+  }, [folders, groupedTasks]);
 
   const subFolders = folders.filter(f => {
     if (folderId) return String(f.parent_id) === String(folderId);
@@ -509,11 +518,18 @@ export default function GroupedTasksPage() {
                     (index + 1).toString().padStart(2, '0')
                   )}
                 </div>
-                <div 
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mr-3 transition-colors ${!color ? 'bg-accent/10 text-accent' : ''}`} 
-                  style={color ? { backgroundColor: color.bg, color: color.dot } : {}}
-                >
-                  <Folder size={20} fill="currentColor" />
+                <div className="relative mr-3 shrink-0">
+                  <div 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${!color ? 'bg-accent/10 text-accent' : ''}`} 
+                    style={color ? { backgroundColor: color.bg, color: color.dot } : {}}
+                  >
+                    <Folder size={20} fill="currentColor" />
+                  </div>
+                  {allTasks.length > 0 && (
+                    <div className="absolute -top-1.5 -right-1.5 bg-accent text-white text-[8px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm border border-white">
+                      {allTasks.length}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
