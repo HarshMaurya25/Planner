@@ -6,7 +6,7 @@ export const useAuthStore = create((set, get) => ({
   loading: true,
 
   initializeAuth: async () => {
-    const stored = localStorage.getItem('planner_user');
+    const stored = localStorage.getItem('workflow_user');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -16,9 +16,9 @@ export const useAuthStore = create((set, get) => ({
           .eq('id', parsed.id)
           .single();
         if (data) set({ user: data });
-        else localStorage.removeItem('planner_user');
+        else localStorage.removeItem('workflow_user');
       } catch (_) {
-        localStorage.removeItem('planner_user');
+        localStorage.removeItem('workflow_user');
       }
     }
     set({ loading: false });
@@ -32,7 +32,7 @@ export const useAuthStore = create((set, get) => ({
       .eq('password', password)
       .single();
     if (error || !data) throw new Error('Invalid username or password');
-    localStorage.setItem('planner_user', JSON.stringify(data));
+    localStorage.setItem('workflow_user', JSON.stringify(data));
     set({ user: data });
     return data;
   },
@@ -52,7 +52,7 @@ export const useAuthStore = create((set, get) => ({
       .select()
       .single();
     if (error) throw error;
-    localStorage.setItem('planner_user', JSON.stringify(data));
+    localStorage.setItem('workflow_user', JSON.stringify(data));
     set({ user: data });
     return data;
   },
@@ -68,12 +68,12 @@ export const useAuthStore = create((set, get) => ({
       .single();
     if (error) throw error;
     set({ user: data });
-    localStorage.setItem('planner_user', JSON.stringify(data));
+    localStorage.setItem('workflow_user', JSON.stringify(data));
     return data;
   },
 
   signOut: () => {
-    localStorage.removeItem('planner_user');
+    localStorage.removeItem('workflow_user');
     set({ user: null });
   },
 }));

@@ -35,7 +35,7 @@ export default function Login() {
             <Folder size={22} className="text-white" fill="currentColor" strokeWidth={2.5} />
           </div>
           <h1 className="text-xl font-semibold text-app-heading">Welcome back</h1>
-          <p className="text-sm text-app-muted mt-1">Sign in to your planner</p>
+          <p className="text-sm text-app-muted mt-1">Sign in to your WorkFlow</p>
         </div>
 
         {error && (

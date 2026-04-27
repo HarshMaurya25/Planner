@@ -27,7 +27,7 @@ export default function Sidebar({ onLogoutRequest, onPasswordResetRequest }) {
           <div className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center shrink-0">
             <Folder size={14} className="text-white" fill="currentColor" strokeWidth={2.5} />
           </div>
-          <span className="text-sm font-semibold text-app-heading tracking-tight">Planner</span>
+          <span className="text-sm font-semibold text-app-heading tracking-tight">WorkFlow</span>
         </div>
       </div>
 

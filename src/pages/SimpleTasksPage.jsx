@@ -105,7 +105,7 @@ export default function SimpleTasksPage() {
             </div>
             Tasks
           </h1>
-          <p className="text-xs font-bold text-app-muted mt-1 uppercase tracking-widest ml-14">Daily Planner</p>
+          <p className="text-xs font-bold text-app-muted mt-1 uppercase tracking-widest ml-14">Daily WorkFlow</p>
         </div>
 
         <div className="flex items-center gap-2">
