@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function ShareModal({ folder, onClose }) {
-  const [tab, setTab] = useState('choose'); // 'choose' | 'copy' | 'team'
+  const [tab, setTab] = useState(folder.is_shared ? 'team' : 'choose'); // 'choose' | 'copy' | 'team'
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState(null); // { type: 'success' | 'error', message }
   const [loading, setLoading] = useState(false);
@@ -112,7 +112,7 @@ export default function ShareModal({ folder, onClose }) {
         {tab === 'copy' && (
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setTab('choose')} className="text-xs font-bold text-accent hover:underline">← Back</button>
+              <button onClick={() => setTab(folder.is_shared ? 'team' : 'choose')} className="text-xs font-bold text-accent hover:underline">← Back</button>
               <span className="text-xs font-bold text-app-muted">Send Copy</span>
             </div>
             <div className="flex gap-2">
@@ -144,12 +144,10 @@ export default function ShareModal({ folder, onClose }) {
         )}
 
         {/* Team Share Tab */}
-        {(tab === 'team' || folder.is_shared) && (
+        {tab === 'team' && (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setTab('choose')} className="text-xs font-bold text-accent hover:underline">← Mode Selection</button>
-                <div className="w-1 h-1 rounded-full bg-app-border" />
                 <button onClick={() => setTab('copy')} className="text-xs font-bold text-accent hover:underline flex items-center gap-1"><Copy size={10} /> Send Copy</button>
               </div>
               {isOwner && (
