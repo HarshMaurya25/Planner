@@ -518,18 +518,9 @@ export default function GroupedTasksPage() {
                     (index + 1).toString().padStart(2, '0')
                   )}
                 </div>
-                <div className="relative mr-3 shrink-0">
-                  <div 
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${!color ? 'bg-accent/10 text-accent' : ''}`} 
-                    style={color ? { backgroundColor: color.bg, color: color.dot } : {}}
-                  >
-                    <Folder size={20} fill="currentColor" />
-                  </div>
-                  {allTasks.length > 0 && (
-                    <div className="absolute -top-1.5 -right-1.5 bg-accent text-white text-[8px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm border border-white">
-                      {allTasks.length}
-                    </div>
-                  )}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mr-3 transition-colors ${!color ? 'bg-accent/10 text-accent' : ''}`} 
+                    style={color ? { backgroundColor: color.bg, color: color.dot } : {}}>
+                  <Folder size={20} fill="currentColor" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
