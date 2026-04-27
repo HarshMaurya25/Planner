@@ -279,7 +279,7 @@ export default function GroupedTasksPage() {
 
   const getRecursiveTasks = (fId) => {
     const f = folders.find(x => x.id === fId);
-    if (!f || f.type === 'remember') return [];
+    if (!f) return [];
 
     let tks = groupedTasks.filter(t => String(t.folder_id) === String(fId));
     const children = folders.filter(child => String(child.parent_id) === String(fId));
@@ -454,7 +454,7 @@ export default function GroupedTasksPage() {
       {currentFolder && currentFolder.description && (
         <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="group relative -mt-6 mb-6">
-            <div className="pr-10" onClick={() => setShowFolderNoteModal(currentFolder)}>
+            <div className="pr-10">
               <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
             </div>
             <button 

@@ -213,7 +213,7 @@ export default function TaskCard({
 
       {/* Note / Description (Visible only when expanded) */}
       {task.description && isExpanded && (
-        <div className="ml-12 mt-2 overflow-hidden animate-in slide-in-from-top-1 duration-200" onClick={e => { e.stopPropagation(); setShowNoteModal(true); }}>
+        <div className="ml-12 mt-2 overflow-hidden animate-in slide-in-from-top-1 duration-200">
           <NoteRenderer text={task.description} />
         </div>
       )}
