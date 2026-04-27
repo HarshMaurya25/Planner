@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, Star, Palette, Trash2, MoreHorizontal, Edit2, UserPlus, X, ChevronUp, ChevronDown, ExternalLink, FileText, Link as LinkIcon, LogOut } from 'lucide-react';
+import { Check, Star, Palette, Trash2, MoreHorizontal, Edit2, UserPlus, X, ChevronUp, ChevronDown, ExternalLink, FileText, Link as LinkIcon, LogOut, Calendar } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import NoteRenderer from './NoteRenderer';
@@ -49,6 +49,7 @@ export default function TaskCard({
   const colorRef = useRef(null);
   const assignRef = useRef(null);
   const noteInputRef = useRef(null);
+  const dateInputRef = useRef(null);
 
   const isCompleted = task.status === 'completed';
   const colorStyle = (task.color && TASK_COLORS[task.color]) ? TASK_COLORS[task.color] : { bg: 'bg-white', text: 'text-app-body', border: 'border-app-border' };
@@ -181,12 +182,12 @@ export default function TaskCard({
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {task.deadline && (
               <p className="text-[10px] font-bold text-app-muted uppercase tracking-wider">
-                Due {new Date(task.deadline).toLocaleDateString()}
+                Due {new Date(task.deadline).toLocaleDateString('en-GB')}
               </p>
             )}
             {showCreatedDates && (
               <p className="text-[10px] font-bold text-app-muted uppercase tracking-wider">
-                Created {new Date(task.created_at).toLocaleDateString()}
+                Created {new Date(task.created_at).toLocaleDateString('en-GB')}
               </p>
             )}
             {assignedMember && (
@@ -249,6 +250,24 @@ export default function TaskCard({
           <button onClick={(e) => { e.stopPropagation(); onRename?.(task); setShowControls(false); }} className="p-2 rounded-lg hover:bg-app-bg text-app-muted transition-colors" title="Rename Task">
             <Edit2 size={16} />
           </button>
+
+          <div className="relative">
+            <button 
+              onClick={(e) => { e.stopPropagation(); dateInputRef.current?.showPicker(); }} 
+              className={`p-2 rounded-lg transition-colors ${task.deadline ? 'text-accent hover:bg-accent/5' : 'text-app-muted hover:bg-app-bg'}`} 
+              title="Change Date"
+            >
+              <Calendar size={16} />
+            </button>
+            <input 
+              ref={dateInputRef}
+              type="date"
+              value={task.deadline || ''}
+              onChange={(e) => { onUpdate?.(task.id, { deadline: e.target.value || null }); setShowControls(false); }}
+              className="w-0 h-0 absolute opacity-0"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
 
           {onMoveDirection && (
             <>

@@ -158,7 +158,7 @@ function AddFolderModal({ parentId, onClose, onAdd }) {
   );
 }
 
-function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUpdate, onRename, onShare, autoSort, setAutoSort, onDeleteAllTasks, onLeave, isOwner, onEditNote }) {
+function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUpdate, onRename, onShare, autoSort, setAutoSort, sortBy, setSortBy, onDeleteAllTasks, onDeleteCompletedTasks, onLeave, isOwner, onEditNote }) {
   const [open, setOpen] = useState(false);
   const [upwards, setUpwards] = useState(false);
   const ref = useRef(null);
@@ -217,6 +217,12 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
             </div>
             Auto-sort tasks
           </button>
+          <button onClick={(e) => { e.stopPropagation(); setSortBy(sortBy === 'date' ? 'auto' : 'date'); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-app-body hover:bg-app-bg transition-colors">
+            <div className={`w-4 h-4 rounded border-2 transition-colors flex items-center justify-center ${sortBy === 'date' ? 'bg-accent border-accent' : 'border-app-border'}`}>
+              {sortBy === 'date' && <Check size={10} className="text-white" strokeWidth={4} />}
+            </div>
+            Sort by Date
+          </button>
           <Item icon={Share2} label={folder.is_shared ? "Manage Team" : "Share with Team"} onClick={() => onShare(folder)} />
 
           <div className="h-px bg-app-border my-1 mx-2" />
@@ -227,6 +233,7 @@ function FolderActionsMenu({ folder, onBulk, onDelete, onMove, onDuplicate, onUp
           <div className="h-px bg-app-border my-1 mx-2" />
           {isOwner ? (
             <>
+              <Item icon={Trash2} label="Clear completed tasks" onClick={() => onDeleteCompletedTasks(folder.id)} danger />
               <Item icon={Trash2} label="Clear all tasks" onClick={() => onDeleteAllTasks(folder.id)} danger />
               <Item icon={Trash2} label="Delete Folder" onClick={() => onDelete(folder.id)} danger bold />
             </>
@@ -247,7 +254,7 @@ export default function GroupedTasksPage() {
     folders, groupedTasks, fetchFolders, fetchGroupedTasks,
     addFolder, deleteFolder, moveFolder, updateFolderPosition,
     duplicateFolder, updateFolder, addGroupedTask, updateGroupedTask, deleteGroupedTask,
-    bulkResetFolderTicks, bulkResetFolderPriorities, bulkClearFolderColors, deleteAllFolderTasks,
+    bulkResetFolderTicks, bulkResetFolderPriorities, bulkClearFolderColors, deleteAllFolderTasks, deleteCompletedFolderTasks,
     folderMembers, fetchFolderMembers, assignTask, setTaskIndex, setFolderIndex, leaveFolder
   } = useAppStore();
 
@@ -260,6 +267,7 @@ export default function GroupedTasksPage() {
   const [taskInput, setTaskInput] = useState('');
   const [taskDeadline, setTaskDeadline] = useState('');
   const [autoSort, setAutoSort] = useState(true);
+  const [sortBy, setSortBy] = useState('auto'); // 'auto' | 'date'
   const taskInputRef = useRef(null);
   const dateInputRef = useRef(null);
   const [fabOpen, setFabOpen] = useState(false);
@@ -369,22 +377,34 @@ export default function GroupedTasksPage() {
   };
   const breadcrumbs = getBreadcrumbs();
 
-  const sortedTasks = autoSort 
-    ? [...folderTasks].sort((a, b) => {
-        if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
-        const pOrder = { high: 0, medium: 1, low: 2 };
-        const pa = pOrder[a.priority] ?? 3;
-        const pb = pOrder[b.priority] ?? 3;
-        if (pa !== pb) return pa - pb;
-        return (a.position || 0) - (b.position || 0);
-      })
-    : [...folderTasks].sort((a, b) => (a.position || 0) - (b.position || 0));
+  const sortedTasks = [...folderTasks].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
+    
+    if (sortBy === 'date') {
+      if (!a.deadline && !b.deadline) return (a.position || 0) - (b.position || 0);
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline) - new Date(b.deadline);
+    }
+    
+    if (sortBy === 'priority' || autoSort) {
+      const pOrder = { high: 0, medium: 1, low: 2 };
+      const pa = pOrder[a.priority] ?? 3;
+      const pb = pOrder[b.priority] ?? 3;
+      if (pa !== pb) return pa - pb;
+    }
+    
+    return (a.position || 0) - (b.position || 0);
+  });
 
   return (
     <div className="max-w-3xl mx-auto w-full py-8 px-4 md:px-6 pb-40">
       {/* Header & Breadcrumbs */}
       <div className="flex items-center gap-2 text-[10px] font-black text-app-muted uppercase tracking-widest mb-4 overflow-x-auto no-scrollbar">
-        <Link to="/groups" className="hover:text-accent transition-colors shrink-0">Groups</Link>
+        <Link to="/groups" className="flex items-center gap-1 hover:text-accent transition-colors shrink-0">
+          <Folder size={10} fill="currentColor" />
+          Groups
+        </Link>
         {breadcrumbs.map((crumb) => (
           <div key={crumb.id} className="flex items-center gap-2 shrink-0">
             <ChevronRight size={10} className="opacity-40" />
@@ -414,7 +434,9 @@ export default function GroupedTasksPage() {
               onMove={setMovingFolder} onDuplicate={duplicateFolder} onUpdate={updateFolder} onRename={setRenamingFolder}
               onShare={setSharingFolder}
               onDeleteAllTasks={(id) => setConfirmDelete({ open: true, title: 'Clear Folder', message: 'Delete all tasks in this folder?', onConfirm: () => deleteAllFolderTasks(id) })}
+              onDeleteCompletedTasks={(id) => setConfirmDelete({ open: true, title: 'Clear Completed', message: 'Delete only completed tasks?', onConfirm: () => deleteCompletedFolderTasks(id) })}
               autoSort={autoSort} setAutoSort={setAutoSort}
+              sortBy={sortBy} setSortBy={setSortBy}
               onLeave={(id) => setConfirmDelete({ open: true, title: 'Exit Team', message: 'Leave this team folder?', onConfirm: () => { leaveFolder(id); navigate('/groups'); } })}
               isOwner={isOwner}
               onEditNote={() => setIsEditingFolderNote(true)}
@@ -507,7 +529,10 @@ export default function GroupedTasksPage() {
                     (index + 1).toString().padStart(2, '0')
                   )}
                 </div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mr-3" style={{ backgroundColor: color ? color.bg : '#F1F5F9', color: color ? color.dot : '#64748B' }}>
+                <div 
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mr-3 transition-colors ${!color ? 'bg-accent/10 text-accent' : ''}`} 
+                  style={color ? { backgroundColor: color.bg, color: color.dot } : {}}
+                >
                   <Folder size={20} fill="currentColor" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -540,6 +565,7 @@ export default function GroupedTasksPage() {
                     onMove={setMovingFolder} onDuplicate={duplicateFolder} onUpdate={updateFolder} onRename={setRenamingFolder}
                     onShare={setSharingFolder}
                     onDeleteAllTasks={(id) => setConfirmDelete({ open: true, title: 'Clear Folder', message: 'Delete all tasks in this folder?', onConfirm: () => deleteAllFolderTasks(id) })}
+                    onDeleteCompletedTasks={(id) => setConfirmDelete({ open: true, title: 'Clear Completed', message: 'Delete only completed tasks?', onConfirm: () => deleteCompletedFolderTasks(id) })}
                     autoSort={autoSort} setAutoSort={setAutoSort}
                     onLeave={(id) => setConfirmDelete({ open: true, title: 'Exit Team', message: 'Leave this team folder?', onConfirm: () => leaveFolder(id) })}
                     isOwner={subIsOwner}

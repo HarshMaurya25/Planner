@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { User, Calendar, Folder, Filter, ArrowUpDown, Check, LayoutGrid, MoreHorizontal, Edit2, X } from 'lucide-react';
+import { User, Calendar, Folder, Filter, ArrowUpDown, Check, LayoutGrid, MoreHorizontal, Edit2, X, Lock } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 const TASK_COLORS = {
@@ -41,6 +41,7 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
   const isDone = task.status === 'completed';
   const folderName = folderPath || 'Personal Tasks';
   const menuRef = useRef(null);
+  const dateInputRef = useRef(null);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -69,7 +70,7 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
           </span>
           {task.deadline && (
             <span className="flex items-center gap-1 text-[10px] font-bold text-app-muted">
-              <Calendar size={10} /> {new Date(task.deadline).toLocaleDateString()}
+              <Calendar size={10} /> {new Date(task.deadline).toLocaleDateString('en-GB')}
             </span>
           )}
           {task.priority && (
@@ -96,6 +97,20 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
               className="flex items-center gap-2 w-full px-3 py-2 text-xs font-bold text-app-body hover:bg-app-bg transition-colors"
             >
               <Edit2 size={12} className="text-app-muted" /> Rename
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); dateInputRef.current?.showPicker(); setShowMenu(false); }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs font-bold text-app-body hover:bg-app-bg transition-colors"
+            >
+              <Calendar size={12} className="text-app-muted" /> Change Date
+              <input 
+                ref={dateInputRef}
+                type="date"
+                value={task.deadline || ''}
+                onChange={(e) => { onToggle(task, { deadline: e.target.value || null }); setShowMenu(false); }}
+                className="w-0 h-0 absolute opacity-0"
+                onClick={e => e.stopPropagation()}
+              />
             </button>
           </div>
         )}
@@ -178,8 +193,12 @@ export default function MyTasksPage() {
     return Object.values(groups);
   }, [sortedTasks, folders]);
 
-  const handleToggle = async (task) => {
-    await updateGroupedTask(task.id, { status: task.status === 'completed' ? 'not_done' : 'completed' });
+  const handleToggle = async (task, updates = null) => {
+    if (updates) {
+      await updateGroupedTask(task.id, updates);
+    } else {
+      await updateGroupedTask(task.id, { status: task.status === 'completed' ? 'not_done' : 'completed' });
+    }
     fetchMyTasks();
   };
 

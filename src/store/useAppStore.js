@@ -171,6 +171,19 @@ export const useAppStore = create((set, get) => ({
     set({ simpleTasks: [] });
   },
 
+  deleteCompletedSimpleTasks: async () => {
+    const userId = getUserId();
+    if (!userId) return;
+    const now = new Date().toISOString();
+    await supabase
+      .from('tasks')
+      .update({ deleted_at: now })
+      .eq('created_by', userId)
+      .eq('status', 'completed')
+      .is('folder_id', null);
+    set(s => ({ simpleTasks: s.simpleTasks.filter(t => t.status !== 'completed') }));
+  },
+
   // ── FOLDERS (Page 2) ─────────────────────────────────
   fetchFolders: async () => {
     const userId = getUserId();
@@ -586,6 +599,16 @@ export const useAppStore = create((set, get) => ({
     set(s => ({ groupedTasks: s.groupedTasks.filter(t => t.folder_id !== folderId) }));
   },
 
+  deleteCompletedFolderTasks: async (folderId) => {
+    const now = new Date().toISOString();
+    await supabase
+      .from('tasks')
+      .update({ deleted_at: now })
+      .eq('folder_id', folderId)
+      .eq('status', 'completed');
+    set(s => ({ groupedTasks: s.groupedTasks.filter(t => !(t.folder_id === folderId && t.status === 'completed')) }));
+  },
+
   // ── SHARING ──────────────────────────────────────────
 
   // Send a COPY of a folder to another user (no sync)
@@ -661,7 +684,7 @@ export const useAppStore = create((set, get) => ({
   },
 
   // Convert folder to TEAM SHARED mode
-  convertToTeamFolder: async (folderId) => {
+  enableTeamShare: async (folderId) => {
     const userId = getUserId();
     if (!userId) return;
 

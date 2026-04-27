@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabaseClient';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   loading: true,
 
@@ -54,6 +54,21 @@ export const useAuthStore = create((set) => ({
     if (error) throw error;
     localStorage.setItem('planner_user', JSON.stringify(data));
     set({ user: data });
+    return data;
+  },
+
+  updatePassword: async (newPassword) => {
+    const user = get().user;
+    if (!user) throw new Error('Not authenticated');
+    const { data, error } = await supabase
+      .from('users')
+      .update({ password: newPassword })
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    set({ user: data });
+    localStorage.setItem('planner_user', JSON.stringify(data));
     return data;
   },
 

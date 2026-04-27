@@ -30,11 +30,12 @@ export default function SimpleTasksPage() {
   const { 
     simpleTasks, fetchSimpleTasks, addSimpleTask, updateSimpleTask, deleteSimpleTask,
     bulkResetSimpleTicks, bulkResetSimplePriorities, bulkClearSimpleColors, deleteAllSimpleTasks,
-    setTaskIndex
+    deleteCompletedSimpleTasks, setTaskIndex
   } = useAppStore();
   const [taskInput, setTaskInput] = useState('');
   const [taskDeadline, setTaskDeadline] = useState('');
   const [autoSort, setAutoSort] = useState(true);
+  const [sortBy, setSortBy] = useState('auto'); // 'auto' | 'date' | 'priority'
   const [confirmDelete, setConfirmDelete] = useState({ open: false, title: '', message: '', onConfirm: null });
   const [renamingTask, setRenamingTask] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
@@ -73,16 +74,25 @@ export default function SimpleTasksPage() {
     fetchSimpleTasks();
   };
 
-  const sortedTasks = autoSort 
-    ? [...simpleTasks].sort((a, b) => {
-        if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
-        const pOrder = { high: 0, medium: 1, low: 2 };
-        const pa = pOrder[a.priority] ?? 3;
-        const pb = pOrder[b.priority] ?? 3;
-        if (pa !== pb) return pa - pb;
-        return (a.position || 0) - (b.position || 0);
-      })
-    : [...simpleTasks].sort((a, b) => (a.position || 0) - (b.position || 0));
+  const sortedTasks = [...simpleTasks].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
+    
+    if (sortBy === 'date') {
+      if (!a.deadline && !b.deadline) return (a.position || 0) - (b.position || 0);
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline) - new Date(b.deadline);
+    }
+    
+    if (sortBy === 'priority' || autoSort) {
+      const pOrder = { high: 0, medium: 1, low: 2 };
+      const pa = pOrder[a.priority] ?? 3;
+      const pb = pOrder[b.priority] ?? 3;
+      if (pa !== pb) return pa - pb;
+    }
+    
+    return (a.position || 0) - (b.position || 0);
+  });
 
   return (
     <div className="max-w-2xl mx-auto w-full py-8 px-4 md:px-6 mb-20">
@@ -113,6 +123,12 @@ export default function SimpleTasksPage() {
                 </div>
                 Auto-sort tasks
               </button>
+              <button onClick={() => setSortBy(sortBy === 'date' ? 'auto' : 'date')} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-app-body hover:bg-app-bg transition-colors">
+                <div className={`w-4 h-4 rounded border-2 transition-colors flex items-center justify-center ${sortBy === 'date' ? 'bg-accent border-accent' : 'border-app-border'}`}>
+                  {sortBy === 'date' && <Check size={10} className="text-white" strokeWidth={4} />}
+                </div>
+                Sort by Date
+              </button>
               <button onClick={bulkResetSimpleTicks} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-app-body hover:bg-app-bg transition-colors">
                 <RotateCcw size={16} className="text-app-muted" /> Reset all ticks
               </button>
@@ -124,8 +140,14 @@ export default function SimpleTasksPage() {
               </button>
               <div className="h-px bg-app-border my-1 mx-2" />
               <button 
-                onClick={() => setConfirmDelete({ open: true, title: 'Clear All Tasks', message: 'Delete all tasks in this list?', onConfirm: deleteAllSimpleTasks })}
+                onClick={() => setConfirmDelete({ open: true, title: 'Clear Completed', message: 'Delete only completed tasks?', onConfirm: deleteCompletedSimpleTasks })}
                 className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={16} /> Delete completed tasks
+              </button>
+              <button 
+                onClick={() => setConfirmDelete({ open: true, title: 'Clear All Tasks', message: 'Delete all tasks in this list?', onConfirm: deleteAllSimpleTasks })}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-bold text-red-500/50 hover:bg-red-50 transition-colors"
               >
                 <Trash2 size={16} /> Delete all tasks
               </button>

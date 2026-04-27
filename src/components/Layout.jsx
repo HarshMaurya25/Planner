@@ -5,12 +5,14 @@ import Sidebar from './Sidebar';
 import MobileBottomBar from './MobileBottomBar';
 import { useAuthStore } from '../store/useAuthStore';
 import ConfirmModal from './ConfirmModal';
+import PasswordResetModal from './PasswordResetModal';
 
 export default function Layout() {
   const { signOut, user } = useAuthStore();
   const { subscribeToChanges, unsubscribe } = useAppStore();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -29,7 +31,7 @@ export default function Layout() {
     <div className="flex h-screen overflow-hidden bg-app-bg">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex shrink-0">
-        <Sidebar />
+        <Sidebar onLogoutRequest={() => setShowLogoutConfirm(true)} onPasswordResetRequest={() => setShowPasswordReset(true)} />
       </div>
 
       {/* Main area */}
@@ -43,7 +45,10 @@ export default function Layout() {
       </div>
 
       {/* Mobile Bottom Bar */}
-      <MobileBottomBar onLogoutRequest={() => setShowLogoutConfirm(true)} />
+      <MobileBottomBar 
+        onLogoutRequest={() => setShowLogoutConfirm(true)} 
+        onPasswordResetRequest={() => setShowPasswordReset(true)} 
+      />
 
       <ConfirmModal
         isOpen={showLogoutConfirm}
@@ -54,6 +59,10 @@ export default function Layout() {
         confirmText="Logout"
         type="primary"
       />
+
+      {showPasswordReset && (
+        <PasswordResetModal onClose={() => setShowPasswordReset(false)} />
+      )}
     </div>
   );
 }

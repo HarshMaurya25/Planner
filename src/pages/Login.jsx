@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, CheckSquare } from 'lucide-react';
+import { Eye, EyeOff, Folder } from 'lucide-react';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -32,7 +32,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-11 h-11 bg-accent rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <CheckSquare size={22} className="text-white" strokeWidth={2.5} />
+            <Folder size={22} className="text-white" fill="currentColor" strokeWidth={2.5} />
           </div>
           <h1 className="text-xl font-semibold text-app-heading">Welcome back</h1>
           <p className="text-sm text-app-muted mt-1">Sign in to your planner</p>

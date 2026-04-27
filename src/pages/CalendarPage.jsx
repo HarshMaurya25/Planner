@@ -320,7 +320,7 @@ export default function CalendarPage() {
           <div className="bg-white border border-app-border rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-app-heading">
-                {format(selectedDay, 'EEEE, MMMM d')}
+                {format(selectedDay, 'EEEE, d/MM/yyyy')}
               </h2>
               <div className="flex items-center gap-2">
                 <button 
@@ -401,7 +401,7 @@ export default function CalendarPage() {
                     <div className="min-w-0 flex-1 mr-3">
                       <p className={`text-xs font-bold ${cs.text} truncate`}>{d.title}</p>
                       <p className="text-[10px] font-bold text-app-muted/70 mt-0.5">
-                        {format(parseISO(d.date), 'MMM d, yyyy')}
+                        {format(parseISO(d.date), 'dd/MM/yyyy')}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
