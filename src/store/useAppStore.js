@@ -721,7 +721,7 @@ export const useAppStore = create((set, get) => ({
     const treeIds = [];
     const collectDescendants = (id) => {
       treeIds.push(id);
-      const children = allFolders.filter(f => f.parent_id === id);
+      const children = allFolders.filter(f => String(f.parent_id) === String(id));
       children.forEach(c => collectDescendants(c.id));
     };
     collectDescendants(folderId);
@@ -738,9 +738,17 @@ export const useAppStore = create((set, get) => ({
       .delete()
       .in('folder_id', treeIds)
       .neq('role', 'owner');
+    
+    // 4. Unassign tasks from everyone except the owner
+    await supabase
+      .from('tasks')
+      .update({ assigned_to: null, updated_at: new Date().toISOString() })
+      .in('folder_id', treeIds)
+      .neq('assigned_to', userId);
 
     set(s => ({
-      folders: s.folders.map(f => treeIds.includes(f.id) ? { ...f, is_shared: false } : f)
+      folders: s.folders.map(f => treeIds.some(tid => String(tid) === String(f.id)) ? { ...f, is_shared: false } : f),
+      groupedTasks: s.groupedTasks.map(t => (treeIds.some(tid => String(tid) === String(t.folder_id)) && t.assigned_to !== userId) ? { ...t, assigned_to: null } : t)
     }));
   },
 
