@@ -742,19 +742,36 @@ export const useAppStore = create((set, get) => ({
   },
 
   removeTeamMember: async (folderId, userId) => {
-    const removeRecursively = async (currentId) => {
-      await supabase
-        .from('folder_members')
-        .delete()
-        .eq('folder_id', currentId)
-        .eq('user_id', userId);
-        
-      const children = get().folders.filter(f => f.parent_id === currentId);
-      for (const child of children) {
-        await removeRecursively(child.id);
+    const allFolders = get().folders;
+    
+    // 1. Find root
+    let currentId = folderId;
+    let rootId = folderId;
+    while (currentId) {
+      const f = allFolders.find(x => x.id === currentId);
+      if (f && f.parent_id) {
+        currentId = f.parent_id;
+        rootId = currentId;
+      } else {
+        break;
       }
+    }
+
+    // 2. Find all tree IDs
+    const treeIds = [];
+    const collectDescendants = (id) => {
+      treeIds.push(id);
+      const children = allFolders.filter(f => f.parent_id === id);
+      children.forEach(c => collectDescendants(c.id));
     };
-    await removeRecursively(folderId);
+    collectDescendants(rootId);
+
+    // 3. Delete
+    await supabase
+      .from('folder_members')
+      .delete()
+      .eq('user_id', userId)
+      .in('folder_id', treeIds);
 
     
     // Unassign their tasks
@@ -932,10 +949,37 @@ export const useAppStore = create((set, get) => ({
   leaveFolder: async (folderId) => {
     const { user } = useAuthStore.getState();
     if (!user) return;
+    const allFolders = get().folders;
+    
+    // 1. Find the root of this folder's tree
+    let currentId = folderId;
+    let rootId = folderId;
+    while (currentId) {
+      const f = allFolders.find(x => x.id === currentId);
+      if (f && f.parent_id) {
+        currentId = f.parent_id;
+        rootId = currentId;
+      } else {
+        break;
+      }
+    }
+
+    // 2. Find all folders in this tree (root + descendants)
+    const treeIds = [];
+    const collectDescendants = (id) => {
+      treeIds.push(id);
+      const children = allFolders.filter(f => f.parent_id === id);
+      children.forEach(c => collectDescendants(c.id));
+    };
+    collectDescendants(rootId);
+
+    // 3. Delete membership for the user across the entire tree
     const { error } = await supabase
       .from('folder_members')
       .delete()
-      .match({ folder_id: folderId, user_id: user.id });
+      .eq('user_id', user.id)
+      .in('folder_id', treeIds);
+    
     if (error) throw error;
     await get().fetchFolders();
   }
