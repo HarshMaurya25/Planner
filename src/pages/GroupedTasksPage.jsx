@@ -275,9 +275,22 @@ export default function GroupedTasksPage() {
   const [draggedId, setDraggedId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const currentFolder = folderId ? folders.find(f => f.id === folderId) : null;
+
+  const getRecursiveTasks = (fId) => {
+    const f = folders.find(x => x.id === fId);
+    if (!f || f.type === 'remember') return [];
+
+    let tks = groupedTasks.filter(t => String(t.folder_id) === String(fId));
+    const children = folders.filter(child => String(child.parent_id) === String(fId));
+    children.forEach(c => {
+      tks = [...tks, ...getRecursiveTasks(c.id)];
+    });
+    return tks;
+  };
+
   const subFolders = folders.filter(f => {
-    if (folderId) return f.parent_id === folderId;
-    return f.parent_id === null || !folders.some(parent => parent.id === f.parent_id);
+    if (folderId) return String(f.parent_id) === String(folderId);
+    return f.parent_id === null || !folders.some(parent => String(parent.id) === String(f.parent_id));
   }).sort((a, b) => (a.position || 0) - (b.position || 0));
   const folderTasks = groupedTasks.filter(t => t.folder_id === folderId);
   const isOwner = !currentFolder || currentFolder.created_by === user?.id;
@@ -495,23 +508,11 @@ export default function GroupedTasksPage() {
         <div className="flex flex-col gap-3 mb-8">
           {subFolders.map((folder, index) => {
             const color = folder.color ? FOLDER_COLORS[folder.color] : null;
-            const getRecursiveTasks = (fId) => {
-              const f = folders.find(x => x.id === fId);
-              if (!f || f.type === 'remember') return [];
-
-              let tks = groupedTasks.filter(t => t.folder_id === fId);
-              const children = folders.filter(f => f.parent_id === fId);
-              children.forEach(c => {
-                tks = [...tks, ...getRecursiveTasks(c.id)];
-              });
-              return tks;
-            };
-
-            const fTasks = groupedTasks.filter(t => t.folder_id === folder.id);
-            const fSubfolders = folders.filter(f => f.parent_id === folder.id);
             const isShared = folder.is_shared || currentFolder?.is_shared;
             const subIsOwner = folder.created_by === user?.id;
             const allTasks = getRecursiveTasks(folder.id);
+            const fTasks = groupedTasks.filter(t => t.folder_id === folder.id);
+            const fSubfolders = folders.filter(f => f.parent_id === folder.id);
 
             let progress = null;
             if (folder.type !== 'remember') {
