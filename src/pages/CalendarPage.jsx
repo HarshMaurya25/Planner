@@ -25,7 +25,7 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 function DateModal({ defaultDate, onClose, onAction, mode = 'event', editingItem = null }) {
   const [title, setTitle] = useState(editingItem ? editingItem.title : '');
   const [date, setDate] = useState(editingItem ? editingItem.date : (defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')));
-  const [color, setColor] = useState(editingItem ? editingItem.color || 'blue' : 'blue');
+  const [color, setColor] = useState(editingItem ? editingItem.color || 'blue' : useAppStore.getState().getRandomColor());
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -198,7 +198,11 @@ export default function CalendarPage() {
     deleteImportantDate,
     purgeDeletedRecords,
     softDeletePastDates,
-    addSimpleTask
+    addSimpleTask,
+    updateSimpleTask,
+    updateGroupedTask,
+    simpleTasks,
+    groupedTasks
   } = useAppStore();
 
   useEffect(() => {
@@ -206,6 +210,52 @@ export default function CalendarPage() {
     fetchImportantDates();
     fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
   }, [purgeDeletedRecords, fetchImportantDates, fetchCalendarTasks]);
+
+  // Sync local allTasks when store tasks change
+  useEffect(() => {
+    const combined = [...simpleTasks, ...groupedTasks].filter(t => t.deadline);
+    if (combined.length > 0) setAllTasks(combined);
+  }, [simpleTasks, groupedTasks]);
+
+  // Handle swipe gestures for mobile
+  const touchStart = useRef(null);
+  const handleTouchStart = (e) => {
+    touchStart.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e) => {
+    if (!touchStart.current) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart.current - touchEnd;
+    
+    // Threshold of 50px
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        // Swipe left -> next month
+        setCurrent(prev => addMonths(prev, 1));
+      } else {
+        // Swipe right -> prev month
+        setCurrent(prev => subMonths(prev, 1));
+      }
+    }
+    touchStart.current = null;
+  };
+
+  // Handle arrow keys for desktop
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Avoid triggering when user is typing in a modal or input
+      if (showAddModal || showNoteModal || confirmClear) return;
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      
+      if (e.key === 'ArrowLeft') {
+        setCurrent(prev => subMonths(prev, 1));
+      } else if (e.key === 'ArrowRight') {
+        setCurrent(prev => addMonths(prev, 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAddModal, showNoteModal, confirmClear]);
 
   const monthStart = startOfMonth(current);
   const monthEnd = endOfMonth(current);
@@ -229,15 +279,23 @@ export default function CalendarPage() {
 
   const handleModalAction = async (title, date, color, id) => {
     if (id) {
-      // Editing
-      await updateImportantDate(id, { title, date, color });
+      if (mode === 'event') {
+        await updateImportantDate(id, { title, date, color });
+      } else {
+        // Editing a task
+        if (editingItem.folder_id) {
+          await updateGroupedTask(id, { title, deadline: date });
+        } else {
+          await updateSimpleTask(id, { title, deadline: date });
+        }
+        fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+      }
     } else {
       // Adding
       if (modalMode === 'event') {
         await addImportantDate(title, date, color);
       } else {
         await addSimpleTask(title, date);
-        // Refresh tasks
         fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
       }
     }
@@ -277,20 +335,31 @@ export default function CalendarPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <CalendarMenu onClearPast={() => setConfirmClear(true)} />
           <button
             onClick={() => { setModalDefaultDate(selectedDay || new Date()); setModalMode('event'); setShowAddModal(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-white text-xs font-bold rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-accent/10 text-accent text-[11px] font-bold rounded-xl hover:bg-accent/20 transition-all active:scale-95"
           >
-            <Plus size={16} strokeWidth={3} />
-            Mark Date
+            <Plus size={14} strokeWidth={3} />
+            Event
+          </button>
+          <button
+            onClick={() => { setModalDefaultDate(selectedDay || new Date()); setModalMode('task'); setShowAddModal(true); }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white text-[11px] font-bold rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95"
+          >
+            <Plus size={14} strokeWidth={3} />
+            Task
           </button>
         </div>
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-2xl border border-app-border overflow-hidden shadow-sm">
+      <div 
+        className="bg-white rounded-2xl border border-app-border overflow-hidden shadow-sm"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="grid grid-cols-7 border-b border-app-border bg-app-bg/40">
           {WEEKDAYS.map(d => (
             <div key={d} className="py-3 text-center text-[8px] md:text-[10px] font-black text-app-muted uppercase tracking-[0.2em]">
@@ -324,15 +393,22 @@ export default function CalendarPage() {
               <h2 className="text-sm font-bold text-app-heading">
                 {format(selectedDay, 'EEEE, d/MM/yyyy')}
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => { setModalDefaultDate(selectedDay); setModalMode('task'); setShowAddModal(true); }}
+                  className="p-1.5 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
+                  title="Add Task"
+                >
+                  <Plus size={14} strokeWidth={3} />
+                </button>
                 <button 
                   onClick={() => { setModalDefaultDate(selectedDay); setModalMode('event'); setShowAddModal(true); }}
                   className="p-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
                   title="Mark Date"
                 >
-                  <Plus size={16} strokeWidth={3} />
+                  <Star size={14} strokeWidth={2.5} />
                 </button>
-                <button onClick={() => setSelectedDay(null)} className="text-app-muted hover:text-app-body transition-colors">
+                <button onClick={() => setSelectedDay(null)} className="ml-1 p-1 text-app-muted hover:text-app-body transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -370,22 +446,58 @@ export default function CalendarPage() {
                   const isDone = task.status === 'completed';
                   return (
                     <div key={task.id} className={`group flex items-center gap-3 px-4 py-3 rounded-xl ${cs.bg} border border-black/5 ${isDone ? 'opacity-60' : ''}`}>
-                      <div className={`w-4 h-4 rounded flex items-center justify-center ${isDone ? 'bg-green-500 text-white' : 'bg-white border border-app-border'}`}>
-                        {isDone && <Check size={10} strokeWidth={4} />}
-                      </div>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const newStatus = isDone ? 'pending' : 'completed';
+                          if (task.folder_id) {
+                            await updateGroupedTask(task.id, { status: newStatus });
+                          } else {
+                            await updateSimpleTask(task.id, { status: newStatus });
+                          }
+                          fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+                        }}
+                        className={`w-5 h-5 rounded flex items-center justify-center transition-all ${isDone ? 'bg-green-500 text-white' : 'bg-white border border-app-border hover:border-accent'}`}
+                      >
+                        {isDone && <Check size={12} strokeWidth={4} />}
+                      </button>
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className={`text-xs font-bold ${cs.text} ${isDone ? 'line-through' : ''} truncate`}>
                           {task.title}
                         </span>
                         {task.description && <FileText size={10} className="text-app-muted shrink-0" />}
                       </div>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setShowNoteModal(task); }}
-                        className="ml-auto p-1.5 hover:bg-black/5 rounded-lg text-app-muted transition-colors opacity-0 group-hover:opacity-100"
-                        title="Edit Note"
-                      >
-                        <FileText size={14} />
-                      </button>
+                      <div className="ml-auto flex items-center gap-1">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setShowNoteModal(task); }}
+                          className="p-1.5 hover:bg-black/5 rounded-lg text-app-muted transition-colors"
+                          title="Edit Note"
+                        >
+                          <FileText size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingItem({...task, date: task.deadline}); setModalMode('task'); setShowAddModal(true); }}
+                          className="p-1.5 hover:bg-black/5 rounded-lg text-app-muted transition-colors"
+                          title="Edit Task"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button 
+                          onClick={async (e) => { 
+                            e.stopPropagation(); 
+                            if (task.folder_id) {
+                              await useAppStore.getState().deleteGroupedTask(task.id);
+                            } else {
+                              await useAppStore.getState().deleteSimpleTask(task.id);
+                            }
+                            fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+                          }} 
+                          className="p-1.5 hover:bg-black/5 rounded-lg text-app-muted hover:text-red-500 transition-colors"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
