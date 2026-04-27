@@ -495,14 +495,28 @@ export default function GroupedTasksPage() {
         <div className="flex flex-col gap-3 mb-8">
           {subFolders.map((folder, index) => {
             const color = folder.color ? FOLDER_COLORS[folder.color] : null;
+            const getRecursiveTasks = (fId) => {
+              const f = folders.find(x => x.id === fId);
+              if (!f || f.type === 'remember') return [];
+
+              let tks = groupedTasks.filter(t => t.folder_id === fId);
+              const children = folders.filter(f => f.parent_id === fId);
+              children.forEach(c => {
+                tks = [...tks, ...getRecursiveTasks(c.id)];
+              });
+              return tks;
+            };
+
             const fTasks = groupedTasks.filter(t => t.folder_id === folder.id);
             const fSubfolders = folders.filter(f => f.parent_id === folder.id);
             const isShared = folder.is_shared || currentFolder?.is_shared;
             const subIsOwner = folder.created_by === user?.id;
+            const allTasks = getRecursiveTasks(folder.id);
+
             let progress = null;
             if (folder.type !== 'remember') {
-              const total = fTasks.length;
-              const completed = fTasks.filter(t => t.status === 'completed').length;
+              const total = allTasks.length;
+              const completed = allTasks.filter(t => t.status === 'completed').length;
               progress = total > 0 ? Math.round((completed / total) * 100) : 0;
             }
 
@@ -541,7 +555,7 @@ export default function GroupedTasksPage() {
                     {isShared && <Users size={12} className="text-purple-500 shrink-0" />}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[10px] font-medium text-app-muted truncate">{fSubfolders.length > 0 ? `${fSubfolders.length} folders · ` : ''}{fTasks.length} tasks</p>
+                    <p className="text-[10px] font-medium text-app-muted truncate">{fSubfolders.length > 0 ? `${fSubfolders.length} folders · ` : ''}{allTasks.length} tasks</p>
                     {progress !== null && (
                       <div className="flex items-center gap-1.5 ml-2 border-l border-app-border pl-2">
                         <div className="w-12 h-1.5 bg-app-bg rounded-full overflow-hidden"><div className="h-full bg-accent transition-all duration-300" style={{ width: `${progress}%` }} /></div>
