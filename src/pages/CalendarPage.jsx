@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User, Edit2, FileText
+  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User, Edit2, FileText, Star
 } from 'lucide-react';
 import NoteModal from '../components/NoteModal';
 import {
@@ -118,10 +118,10 @@ function CalendarMenu({ onClearPast }) {
         <MoreVertical size={20} />
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-50 bg-white border border-app-border rounded-xl shadow-xl py-2 min-w-[200px] overflow-hidden animate-in fade-in zoom-in duration-100">
+        <div className="absolute right-0 top-11 z-50 bg-white border border-app-border rounded-xl shadow-xl py-2 min-w-[200px] w-max max-w-[calc(100vw-2rem)] overflow-hidden animate-in fade-in zoom-in duration-100">
           <div className="px-4 py-1.5 text-[10px] font-bold text-app-muted uppercase tracking-widest border-b border-app-border mb-1">Actions</div>
           <button
-            onClick={() => { setConfirmClear(true); setOpen(false); }}
+            onClick={() => { onClearPast(); setOpen(false); }}
             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={14} /> Clear all past dates
@@ -339,17 +339,10 @@ export default function CalendarPage() {
           <CalendarMenu onClearPast={() => setConfirmClear(true)} />
           <button
             onClick={() => { setModalDefaultDate(selectedDay || new Date()); setModalMode('event'); setShowAddModal(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-accent/10 text-accent text-[11px] font-bold rounded-xl hover:bg-accent/20 transition-all active:scale-95"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-accent text-white text-[11px] font-bold rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95"
           >
             <Plus size={14} strokeWidth={3} />
-            Event
-          </button>
-          <button
-            onClick={() => { setModalDefaultDate(selectedDay || new Date()); setModalMode('task'); setShowAddModal(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white text-[11px] font-bold rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95"
-          >
-            <Plus size={14} strokeWidth={3} />
-            Task
+            Mark Date
           </button>
         </div>
       </div>
@@ -394,13 +387,6 @@ export default function CalendarPage() {
                 {format(selectedDay, 'EEEE, d/MM/yyyy')}
               </h2>
               <div className="flex items-center gap-1.5">
-                <button 
-                  onClick={() => { setModalDefaultDate(selectedDay); setModalMode('task'); setShowAddModal(true); }}
-                  className="p-1.5 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
-                  title="Add Task"
-                >
-                  <Plus size={14} strokeWidth={3} />
-                </button>
                 <button 
                   onClick={() => { setModalDefaultDate(selectedDay); setModalMode('event'); setShowAddModal(true); }}
                   className="p-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
