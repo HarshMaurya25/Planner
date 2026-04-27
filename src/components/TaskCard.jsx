@@ -3,6 +3,7 @@ import { Check, Star, Palette, Trash2, MoreHorizontal, Edit2, UserPlus, X, Chevr
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import NoteRenderer from './NoteRenderer';
+import NoteModal from './NoteModal';
 
 const TASK_COLORS = {
   blue:   { bg: 'bg-blue-100',   text: 'text-blue-800',   border: 'border-blue-300' },
@@ -42,6 +43,7 @@ export default function TaskCard({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showAssignPicker, setShowAssignPicker] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState(task.description || '');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -172,11 +174,15 @@ export default function TaskCard({
               >
                 {task.title}
                 <ExternalLink size={12} className="shrink-0" />
+                {task.description && <FileText size={10} className="text-app-muted shrink-0 mt-0.5" />}
               </a>
             ) : (
-              <p className={`text-sm font-bold break-words ${colorStyle.text} ${isCompleted ? 'line-through opacity-60' : ''} ${isExpanded ? '' : 'truncate'}`}>
-                {task.title}
-              </p>
+              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                <p className={`text-sm font-bold break-words ${colorStyle.text} ${isCompleted ? 'line-through opacity-60' : ''} ${isExpanded ? '' : 'truncate'}`}>
+                  {task.title}
+                </p>
+                {task.description && <FileText size={10} className="text-app-muted shrink-0 mt-0.5" />}
+              </div>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -215,24 +221,10 @@ export default function TaskCard({
         </div>
       </div>
 
-      {/* Note / Description (Visible only when expanded or editing) */}
-      {(task.description || isEditingNote) && isExpanded && (
-        <div className="ml-12 mt-2 overflow-hidden animate-in slide-in-from-top-1 duration-200" onClick={e => e.stopPropagation()}>
-          {isEditingNote ? (
-            <form onSubmit={handleNoteSubmit}>
-              <textarea
-                ref={noteInputRef}
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                onBlur={handleNoteSubmit}
-                placeholder="Add a note or link..."
-                className="w-full bg-black/5 border border-black/10 rounded-xl p-3 text-xs font-medium focus:outline-none focus:border-accent/30 min-h-[80px]"
-              />
-            </form>
-          ) : (
-            <NoteRenderer text={task.description} />
-
-          )}
+      {/* Note / Description (Visible only when expanded) */}
+      {task.description && isExpanded && (
+        <div className="ml-12 mt-2 overflow-hidden animate-in slide-in-from-top-1 duration-200" onClick={e => { e.stopPropagation(); setShowNoteModal(true); }}>
+          <NoteRenderer text={task.description} />
         </div>
       )}
 
@@ -243,7 +235,7 @@ export default function TaskCard({
             <Star size={16} className={task.priority ? PRIORITY_STYLES[task.priority] : ''} fill={task.priority ? 'currentColor' : 'none'} />
           </button>
           
-          <button onClick={() => { setIsEditingNote(true); setShowControls(false); setIsExpanded(true); }} className="p-2 rounded-lg hover:bg-app-bg text-app-muted transition-colors" title="Add Note">
+          <button onClick={() => { setShowNoteModal(true); setShowControls(false); }} className="p-2 rounded-lg hover:bg-app-bg text-app-muted transition-colors" title="Add Note">
             <FileText size={16} />
           </button>
 
@@ -353,6 +345,13 @@ export default function TaskCard({
             </form>
           </div>
         </div>
+      )}
+      {showNoteModal && (
+        <NoteModal 
+          initialText={task.description}
+          onSave={(newText) => onUpdate?.(task.id, { description: newText || null })}
+          onClose={() => setShowNoteModal(false)}
+        />
       )}
     </div>
   );

@@ -15,9 +15,15 @@ export default function NoteRenderer({ text, className = "", textSize = "text-[1
         const bullet = bulletMatch ? (isNumbered ? bulletMatch[1] : '•') : null;
         const content = bulletMatch ? bulletMatch[2] : trimmed;
 
-        // URL linkification
-        const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+)/g);
+        // Bold detection and linkification
+        const parts = content.split(/(\*\*.*?\*\*|https?:\/\/[^\s]+|www\.[^\s]+)/g);
         const renderedLine = parts.map((part, pi) => {
+          if (!part) return null;
+          
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={pi} className="text-app-heading font-black">{part.slice(2, -2)}</strong>;
+          }
+          
           if (part.match(/^(https?:\/\/|www\.)/)) {
             return (
               <a 

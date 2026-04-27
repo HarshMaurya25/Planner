@@ -10,6 +10,7 @@ import TaskCard from '../components/TaskCard';
 import ConfirmModal from '../components/ConfirmModal';
 import ShareModal from '../components/ShareModal';
 import NoteRenderer from '../components/NoteRenderer';
+import NoteModal from '../components/NoteModal';
 
 const FOLDER_COLORS = {
   blue:   { bg: '#BFDBFE', border: '#93C5FD', dot: '#3B82F6' },
@@ -295,9 +296,7 @@ export default function GroupedTasksPage() {
   const folderTasks = groupedTasks.filter(t => t.folder_id === folderId);
   const isOwner = !currentFolder || currentFolder.created_by === user?.id;
 
-  const [isEditingFolderNote, setIsEditingFolderNote] = useState(false);
-  const [isSavingNote, setIsSavingNote] = useState(false);
-  const [folderNoteText, setFolderNoteText] = useState('');
+  const [showFolderNoteModal, setShowFolderNoteModal] = useState(null); // folder object or null
   const folderNoteInputRef = useRef(null);
 
   useEffect(() => {
@@ -306,13 +305,10 @@ export default function GroupedTasksPage() {
     }
   }, [currentFolder]);
 
-  const handleFolderNoteSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!currentFolder) return;
-    setIsSavingNote(true);
-    await updateFolder(currentFolder.id, { description: folderNoteText.trim() });
-    setIsSavingNote(false);
-    setIsEditingFolderNote(false);
+  const handleFolderNoteSave = async (newText) => {
+    if (!showFolderNoteModal) return;
+    await updateFolder(showFolderNoteModal.id, { description: newText });
+    setShowFolderNoteModal(null);
   };
   const [editingFolderIndex, setEditingFolderIndex] = useState(null);
   const [newFolderIndex, setNewFolderIndex] = useState('');
@@ -452,54 +448,27 @@ export default function GroupedTasksPage() {
               sortBy={sortBy} setSortBy={setSortBy}
               onLeave={(id) => setConfirmDelete({ open: true, title: 'Exit Team', message: 'Leave this team folder?', onConfirm: () => { leaveFolder(id); navigate('/groups'); } })}
               isOwner={isOwner}
-              onEditNote={() => setIsEditingFolderNote(true)}
+              onEditNote={() => setShowFolderNoteModal(currentFolder)}
             />
           )}
         </div>
       </div>
 
       {/* Folder Note Section */}
-      {currentFolder && (isEditingFolderNote || currentFolder.description) && (
+      {currentFolder && currentFolder.description && (
         <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-300">
-          {isEditingFolderNote ? (
-            <div className="bg-white border border-app-border rounded-2xl p-4 shadow-xl mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black text-accent uppercase tracking-widest">Update Description</span>
-                <button onClick={() => setIsEditingFolderNote(false)} className="text-app-muted hover:text-red-500 transition-colors"><X size={14} /></button>
-              </div>
-              <textarea
-                ref={folderNoteInputRef}
-                value={folderNoteText}
-                onChange={e => setFolderNoteText(e.target.value)}
-                placeholder="Add guidelines, links, or context for this folder..."
-                className="w-full bg-app-bg border border-app-border rounded-xl p-4 text-xs font-medium focus:outline-none focus:border-accent min-h-[140px] custom-scrollbar"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setIsEditingFolderNote(false)} className="px-4 py-2 text-xs font-bold text-app-muted hover:bg-app-bg rounded-lg transition-colors">Cancel</button>
-                <button 
-                  onClick={handleFolderNoteSubmit} 
-                  disabled={isSavingNote}
-                  className="px-5 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent-hover shadow-lg shadow-accent/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isSavingNote ? 'Saving...' : 'Save Description'}
-                </button>
-              </div>
+          <div className="group relative -mt-6 mb-6">
+            <div className="pr-10" onClick={() => setShowFolderNoteModal(currentFolder)}>
+              <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
             </div>
-          ) : (
-            <div className="group relative -mt-6 mb-6">
-              <div className="pr-10">
-                <NoteRenderer text={currentFolder.description} className="!gap-1.5" textSize="text-sm" />
-              </div>
-              <button 
-                onClick={() => setIsEditingFolderNote(true)}
-                className="absolute top-0 right-0 p-2 hover:bg-black/5 rounded-lg opacity-40 hover:opacity-100 transition-all"
-                title="Edit Description"
-              >
-                <Edit2 size={14} />
-              </button>
-            </div>
-          )}
+            <button 
+              onClick={() => setShowFolderNoteModal(currentFolder)}
+              className="absolute top-0 right-0 p-2 hover:bg-black/5 rounded-lg opacity-40 hover:opacity-100 transition-all"
+              title="Edit Description"
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -552,7 +521,10 @@ export default function GroupedTasksPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-app-heading truncate group-hover:text-accent transition-colors">{folder.title}</h3>
+                    <h3 className="text-sm font-bold text-app-heading truncate group-hover:text-accent transition-colors flex items-center gap-1.5">
+                      {folder.title}
+                      {folder.description && <FileText size={10} className="text-app-muted shrink-0 mt-0.5" />}
+                    </h3>
                     {isShared && <Users size={12} className="text-purple-500 shrink-0" />}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
@@ -584,6 +556,7 @@ export default function GroupedTasksPage() {
                     autoSort={autoSort} setAutoSort={setAutoSort}
                     onLeave={(id) => setConfirmDelete({ open: true, title: 'Exit Team', message: 'Leave this team folder?', onConfirm: () => leaveFolder(id) })}
                     isOwner={subIsOwner}
+                    onEditNote={() => setShowFolderNoteModal(folder)}
                   />
                 </div>
               </div>
@@ -681,6 +654,13 @@ export default function GroupedTasksPage() {
       {renamingFolder && <RenameModal initialTitle={renamingFolder.title} onClose={() => setRenamingFolder(null)} onRename={(title) => updateFolder(renamingFolder.id, { title })} />}
       {renamingTask && <RenameModal initialTitle={renamingTask.title} onClose={() => setRenamingTask(null)} onRename={(title) => updateGroupedTask(renamingTask.id, { title }).then(() => fetchGroupedTasks(folderId))} />}
       {sharingFolder && <ShareModal folder={sharingFolder} onClose={() => setSharingFolder(null)} />}
+      {showFolderNoteModal && (
+        <NoteModal 
+          initialText={showFolderNoteModal.description}
+          onSave={handleFolderNoteSave}
+          onClose={() => setShowFolderNoteModal(null)}
+        />
+      )}
       
       <ConfirmModal 
         isOpen={confirmDelete.open} 
