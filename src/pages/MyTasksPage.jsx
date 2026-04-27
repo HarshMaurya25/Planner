@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { User, Calendar, Folder, Filter, ArrowUpDown, Check, LayoutGrid, MoreHorizontal, Edit2, X, Lock } from 'lucide-react';
+import { User, Calendar, Folder, Filter, ArrowUpDown, Check, LayoutGrid, MoreHorizontal, Edit2, X, Lock, FileText } from 'lucide-react';
+import NoteModal from '../components/NoteModal';
 import { useAppStore } from '../store/useAppStore';
 
 const TASK_COLORS = {
@@ -41,6 +42,7 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
   const isDone = task.status === 'completed';
   const folderName = folderPath || 'Personal Tasks';
   const menuRef = useRef(null);
+  const [showNoteModal, setShowNoteModal] = useState(false);
   const dateInputRef = useRef(null);
 
   useEffect(() => {
@@ -60,9 +62,12 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-bold ${colorStyle.text} ${isDone ? 'line-through' : ''}`}>
-          {task.title}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={`text-sm font-bold ${colorStyle.text} ${isDone ? 'line-through' : ''} truncate`}>
+            {task.title}
+          </p>
+          {task.description && <FileText size={10} className="text-app-muted shrink-0 mt-0.5" />}
+        </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
           <span className="flex items-center gap-1 text-[10px] font-bold text-app-muted">
@@ -112,9 +117,23 @@ function TaskItem({ task, onToggle, onRename, folderPath }) {
                 onClick={e => e.stopPropagation()}
               />
             </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowNoteModal(true); setShowMenu(false); }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs font-bold text-app-body hover:bg-app-bg transition-colors"
+            >
+              <FileText size={12} className="text-app-muted" /> {task.description ? 'Edit Note' : 'Add Note'}
+            </button>
           </div>
         )}
       </div>
+
+      {showNoteModal && (
+        <NoteModal 
+          initialText={task.description}
+          onSave={(newText) => onToggle(task, { description: newText || null })}
+          onClose={() => setShowNoteModal(false)}
+        />
+      )}
     </div>
   );
 }

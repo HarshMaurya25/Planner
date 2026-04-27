@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, MoreVertical, Trash2, Check, User, Edit2
+  ChevronLeft, ChevronRight, Plus, X, CalIcon, MoreVertical, Trash2, Check, User, Edit2, FileText
 } from 'lucide-react';
+import NoteModal from '../components/NoteModal';
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
   eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek,
@@ -185,6 +186,7 @@ export default function CalendarPage() {
   const [modalMode, setModalMode] = useState('event'); // 'event' | 'task'
   const [modalDefaultDate, setModalDefaultDate] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [showNoteModal, setShowNoteModal] = useState(null); // task object
   const [confirmClear, setConfirmClear] = useState(false);
 
   const {
@@ -367,13 +369,23 @@ export default function CalendarPage() {
                   const cs = (task.color && COLOR_STYLES[task.color]) ? COLOR_STYLES[task.color] : { bg: 'bg-app-bg', text: 'text-app-body' };
                   const isDone = task.status === 'completed';
                   return (
-                    <div key={task.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl ${cs.bg} border border-black/5 ${isDone ? 'opacity-60' : ''}`}>
+                    <div key={task.id} className={`group flex items-center gap-3 px-4 py-3 rounded-xl ${cs.bg} border border-black/5 ${isDone ? 'opacity-60' : ''}`}>
                       <div className={`w-4 h-4 rounded flex items-center justify-center ${isDone ? 'bg-green-500 text-white' : 'bg-white border border-app-border'}`}>
                         {isDone && <Check size={10} strokeWidth={4} />}
                       </div>
-                      <span className={`text-xs font-bold ${cs.text} ${isDone ? 'line-through' : ''}`}>
-                        {task.title}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`text-xs font-bold ${cs.text} ${isDone ? 'line-through' : ''} truncate`}>
+                          {task.title}
+                        </span>
+                        {task.description && <FileText size={10} className="text-app-muted shrink-0" />}
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowNoteModal(task); }}
+                        className="ml-auto p-1.5 hover:bg-black/5 rounded-lg text-app-muted transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit Note"
+                      >
+                        <FileText size={14} />
+                      </button>
                     </div>
                   );
                 })}
@@ -430,6 +442,28 @@ export default function CalendarPage() {
           mode={modalMode}
           onClose={() => { setShowAddModal(false); setEditingItem(null); }}
           onAction={handleModalAction}
+        />
+      )}
+      
+      {showNoteModal && (
+        <NoteModal 
+          initialText={showNoteModal.description}
+          onSave={async (newText) => {
+            const userId = useAppStore.getState().userId; // Wait, I need updateTask logic
+            // CalendarPage uses updateSimpleTask/updateGroupedTask indirectly?
+            // Actually I should just use updateSimpleTask if it's a simple task or updateGroupedTask.
+            // But wait, CalendarPage's allTasks comes from fetchCalendarTasks which returns * from tasks.
+            // I should use useAppStore's updateSimpleTask if folder_id is null, else updateGroupedTask.
+            
+            if (showNoteModal.folder_id) {
+              await useAppStore.getState().updateGroupedTask(showNoteModal.id, { description: newText || null });
+            } else {
+              await useAppStore.getState().updateSimpleTask(showNoteModal.id, { description: newText || null });
+            }
+            // Refresh tasks
+            fetchCalendarTasks().then(tasks => setAllTasks(tasks || []));
+          }}
+          onClose={() => setShowNoteModal(null)}
         />
       )}
 
