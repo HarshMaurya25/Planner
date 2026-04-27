@@ -299,11 +299,7 @@ export default function GroupedTasksPage() {
   const [showFolderNoteModal, setShowFolderNoteModal] = useState(null); // folder object or null
   const folderNoteInputRef = useRef(null);
 
-  useEffect(() => {
-    if (currentFolder) {
-      setFolderNoteText(currentFolder.description || '');
-    }
-  }, [currentFolder]);
+
 
   const handleFolderNoteSave = async (newText) => {
     if (!showFolderNoteModal) return;

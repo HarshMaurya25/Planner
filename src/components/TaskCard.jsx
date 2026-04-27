@@ -42,15 +42,12 @@ export default function TaskCard({
   const [showControls, setShowControls] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showAssignPicker, setShowAssignPicker] = useState(false);
-  const [isEditingNote, setIsEditingNote] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [noteText, setNoteText] = useState(task.description || '');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const cardRef = useRef(null);
   const colorRef = useRef(null);
   const assignRef = useRef(null);
-  const noteInputRef = useRef(null);
   const dateInputRef = useRef(null);
 
   const isCompleted = task.status === 'completed';
@@ -61,22 +58,19 @@ export default function TaskCard({
 
   // Close controls on outside click
   useEffect(() => {
-    if (!showControls && !isEditingNote) return;
+    if (!showControls) return;
     const handler = (e) => {
       if (cardRef.current && !cardRef.current.contains(e.target)) {
         setShowControls(false);
         setShowColorPicker(false);
         setShowAssignPicker(false);
-        setIsEditingNote(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showControls, isEditingNote]);
+  }, [showControls]);
 
-  useEffect(() => {
-    if (isEditingNote) noteInputRef.current?.focus();
-  }, [isEditingNote]);
+
 
   const handleToggleTick = (e) => {
     e.stopPropagation();
@@ -100,11 +94,7 @@ export default function TaskCard({
     setShowAssignPicker(false);
   };
 
-  const handleNoteSubmit = (e) => {
-    e?.preventDefault();
-    onUpdate?.(task.id, { description: noteText.trim() || null });
-    setIsEditingNote(false);
-  };
+
 
   const [showIndexModal, setShowIndexModal] = useState(false);
   const [newIndexValue, setNewIndexValue] = useState((index + 1).toString());
