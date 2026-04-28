@@ -195,21 +195,30 @@ export default function SimpleTasksPage() {
       </div>
 
       {/* View Switcher */}
-      <div className="flex bg-white/50 backdrop-blur-sm border border-app-border rounded-2xl p-1 mb-8 shadow-sm max-w-[280px]">
-        <button
-          onClick={() => setShowToday(false)}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-black rounded-xl transition-all ${!showToday ? 'bg-white text-accent shadow-md ring-1 ring-black/5' : 'text-app-muted hover:text-app-body hover:bg-white/50'}`}
-        >
-          <ListChecks size={14} strokeWidth={3} />
-          ALL
-        </button>
-        <button
-          onClick={() => setShowToday(true)}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-black rounded-xl transition-all ${showToday ? 'bg-white text-accent shadow-md ring-1 ring-black/5' : 'text-app-muted hover:text-app-body hover:bg-white/50'}`}
-        >
-          <Calendar size={14} strokeWidth={3} />
-          TODAY
-        </button>
+      <div className="flex justify-center mb-10">
+        <div className="relative flex bg-app-bg/50 backdrop-blur-md border border-app-border rounded-full p-1 w-48 h-10 shadow-inner">
+          {/* Sliding Background */}
+          <div 
+            className="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(${showToday ? '100%' : '0%'})` }}
+          />
+          
+          <button
+            onClick={() => setShowToday(false)}
+            className={`relative flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black tracking-widest transition-colors duration-300 ${!showToday ? 'text-accent' : 'text-app-muted hover:text-app-body'}`}
+          >
+            <ListChecks size={12} strokeWidth={3} />
+            ALL
+          </button>
+          
+          <button
+            onClick={() => setShowToday(true)}
+            className={`relative flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black tracking-widest transition-colors duration-300 ${showToday ? 'text-accent' : 'text-app-muted hover:text-app-body'}`}
+          >
+            <Calendar size={12} strokeWidth={3} />
+            TODAY
+          </button>
+        </div>
       </div>
 
       {/* Input Section */}
