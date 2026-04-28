@@ -135,7 +135,7 @@ export default function SimpleTasksPage() {
   return (
     <div className="max-w-2xl mx-auto w-full py-8 px-4 md:px-6 mb-20">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-black text-app-heading tracking-tight flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
@@ -195,7 +195,7 @@ export default function SimpleTasksPage() {
       </div>
 
       {/* View Switcher */}
-      <div className="flex justify-center mb-10">
+      <div className="flex justify-start mb-6">
         <div className="relative flex bg-app-bg/50 backdrop-blur-md border border-app-border rounded-full p-1 w-48 h-10 shadow-inner">
           {/* Sliding Background */}
           <div 
