@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, RotateCcw, Star, Palette, Trash2, X, Settings, Calendar, ListChecks, Hash, Check } from 'lucide-react';
+import { Plus, RotateCcw, Star, Palette, Trash2, X, Settings, Calendar, ListChecks, Check } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import TaskCard from '../components/TaskCard';
 import ConfirmModal from '../components/ConfirmModal';
@@ -30,23 +30,39 @@ export default function SimpleTasksPage() {
   const { 
     simpleTasks, fetchSimpleTasks, addSimpleTask, updateSimpleTask, deleteSimpleTask,
     bulkResetSimpleTicks, bulkResetSimplePriorities, bulkClearSimpleColors, deleteAllSimpleTasks,
-    deleteCompletedSimpleTasks, setTaskIndex
+    deleteCompletedSimpleTasks, setTaskIndex,
+    groupedTasks, fetchGroupedTasks, updateGroupedTask, fetchFolders, deleteGroupedTask
   } = useAppStore();
   const [taskInput, setTaskInput] = useState('');
   const [taskDeadline, setTaskDeadline] = useState('');
   const [autoSort, setAutoSort] = useState(true);
   const [sortBy, setSortBy] = useState('auto'); // 'auto' | 'date' | 'priority'
+  const [showToday, setShowToday] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, title: '', message: '', onConfirm: null });
   const [renamingTask, setRenamingTask] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const dateInputRef = useRef(null);
 
-  useEffect(() => { fetchSimpleTasks(); }, [fetchSimpleTasks]);
+  useEffect(() => { 
+    fetchSimpleTasks(); 
+    fetchFolders().then(() => fetchGroupedTasks());
+  }, [fetchSimpleTasks, fetchGroupedTasks, fetchFolders]);
+
+  const isToday = (dateString) => {
+    if (!dateString) return false;
+    const today = new Date().toLocaleDateString('en-CA');
+    return dateString === today;
+  };
+
+  const displayTasks = showToday 
+    ? [...simpleTasks, ...groupedTasks].filter(t => isToday(t.deadline))
+    : simpleTasks;
 
   const handleAddTask = async (e) => {
     e?.preventDefault();
     if (!taskInput.trim()) return;
-    await addSimpleTask(taskInput, taskDeadline || null); 
+    const deadline = taskDeadline || (showToday ? new Date().toLocaleDateString('en-CA') : null);
+    await addSimpleTask(taskInput, deadline); 
     setTaskInput(''); setTaskDeadline('');
   };
 
@@ -54,23 +70,49 @@ export default function SimpleTasksPage() {
   const onDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
   const onDrop = async (e, targetId) => {
     e.preventDefault(); if (!draggedTaskId || draggedTaskId === targetId) return;
-    const siblings = sortedTasks.filter(t => t.id !== draggedTaskId);
+    const list = [...sortedTasks];
+    const siblings = list.filter(t => t.id !== draggedTaskId);
     const targetIdx = siblings.findIndex(t => t.id === targetId);
-    await setTaskIndex(draggedTaskId, targetIdx); setDraggedTaskId(null);
+    const draggedTask = list.find(t => t.id === draggedTaskId);
+    await setTaskIndex(draggedTaskId, targetIdx, draggedTask?.folder_id);
+    setDraggedTaskId(null);
     fetchSimpleTasks();
+    if (showToday) fetchGroupedTasks();
   };
 
   const handleMoveTask = async (taskId, direction) => {
     const list = [...sortedTasks];
     const idx = list.findIndex(t => t.id === taskId);
     if (idx === -1) return;
+    const task = list[idx];
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= list.length) return;
-    await setTaskIndex(taskId, targetIdx);
+    await setTaskIndex(taskId, targetIdx, task.folder_id);
     fetchSimpleTasks();
+    if (showToday) fetchGroupedTasks();
   };
 
-  const sortedTasks = [...simpleTasks].sort((a, b) => {
+  const handleUpdateTask = async (taskId, updates) => {
+    const task = [...simpleTasks, ...groupedTasks].find(t => t.id === taskId);
+    if (!task) return;
+    if (task.folder_id) {
+      await updateGroupedTask(taskId, updates);
+    } else {
+      await updateSimpleTask(taskId, updates);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    const task = [...simpleTasks, ...groupedTasks].find(t => t.id === taskId);
+    if (!task) return;
+    if (task.folder_id) {
+      await deleteGroupedTask(taskId);
+    } else {
+      await deleteSimpleTask(taskId);
+    }
+  };
+
+  const sortedTasks = [...displayTasks].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
     
     if (sortBy === 'date') {
@@ -152,6 +194,24 @@ export default function SimpleTasksPage() {
         </div>
       </div>
 
+      {/* View Switcher */}
+      <div className="flex bg-white/50 backdrop-blur-sm border border-app-border rounded-2xl p-1 mb-8 shadow-sm max-w-[280px]">
+        <button
+          onClick={() => setShowToday(false)}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-black rounded-xl transition-all ${!showToday ? 'bg-white text-accent shadow-md ring-1 ring-black/5' : 'text-app-muted hover:text-app-body hover:bg-white/50'}`}
+        >
+          <ListChecks size={14} strokeWidth={3} />
+          ALL
+        </button>
+        <button
+          onClick={() => setShowToday(true)}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-black rounded-xl transition-all ${showToday ? 'bg-white text-accent shadow-md ring-1 ring-black/5' : 'text-app-muted hover:text-app-body hover:bg-white/50'}`}
+        >
+          <Calendar size={14} strokeWidth={3} />
+          TODAY
+        </button>
+      </div>
+
       {/* Input Section */}
       <form onSubmit={handleAddTask} className="mb-8 space-y-3">
         <div className="relative group">
@@ -195,10 +255,10 @@ export default function SimpleTasksPage() {
             key={task.id} 
             task={task} 
             index={index}
-            onUpdate={updateSimpleTask} 
-            onDelete={(id) => setConfirmDelete({ open: true, title: 'Delete Task', message: 'Are you sure you want to delete this task?', onConfirm: () => deleteSimpleTask(id) })} 
+            onUpdate={handleUpdateTask} 
+            onDelete={(id) => setConfirmDelete({ open: true, title: 'Delete Task', message: 'Are you sure you want to delete this task?', onConfirm: () => handleDeleteTask(id) })} 
             onRename={setRenamingTask}
-            onSetIndex={(id, newIdx) => setTaskIndex(id, newIdx).then(() => fetchSimpleTasks())}
+            onSetIndex={(id, newIdx) => setTaskIndex(id, newIdx, task.folder_id).then(() => { fetchSimpleTasks(); if (showToday) fetchGroupedTasks(); })}
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDrop={onDrop}
@@ -206,12 +266,14 @@ export default function SimpleTasksPage() {
             onMoveDirection={handleMoveTask}
           />
         ))}
-        {simpleTasks.length === 0 && (
+        {sortedTasks.length === 0 && (
           <div className="py-20 text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-white border-2 border-dashed border-app-border rounded-3xl flex items-center justify-center text-app-muted/30 mb-4 animate-pulse">
-              <Plus size={32} />
+              {showToday ? <Calendar size={32} /> : <Plus size={32} />}
             </div>
-            <p className="text-sm font-bold text-app-muted">No tasks yet. Start by adding one above!</p>
+            <p className="text-sm font-bold text-app-muted">
+              {showToday ? "No tasks scheduled for today." : "No tasks yet. Start by adding one above!"}
+            </p>
           </div>
         )}
       </div>
@@ -219,7 +281,7 @@ export default function SimpleTasksPage() {
       {renamingTask && (
         <RenameModal 
           initialTitle={renamingTask.title} 
-          onRename={(title) => updateSimpleTask(renamingTask.id, { title }).then(() => fetchSimpleTasks())} 
+          onRename={(title) => handleUpdateTask(renamingTask.id, { title }).then(() => { fetchSimpleTasks(); if (showToday) fetchGroupedTasks(); })} 
           onClose={() => setRenamingTask(null)} 
         />
       )}

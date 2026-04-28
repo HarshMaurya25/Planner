@@ -2,8 +2,6 @@
 
 A modern, mobile-first, collaborative task management application designed for students and high-performers. Built with **React**, **Vite**, **Supabase**, and **Tailwind CSS**.
 
-![App Preview](https://via.placeholder.com/1200x600.png?text=Planner+App+Interface)
-
 ## ✨ Features
 
 ### 📁 Smart Folder Management
